@@ -1,4 +1,4 @@
-#include "../linmath.h"
+#include "../../dep/linmath.h"
 #ifndef H_CAMERA
 #define H_CAMERA
 typedef struct Camera {

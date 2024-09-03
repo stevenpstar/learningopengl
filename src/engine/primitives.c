@@ -1,4 +1,4 @@
-#include "../glad/glad.h"
+#include "../../dep/glad/glad.h"
 #include "primitives.h"
 P_CUBE createCube(unsigned int VBO) {
   P_CUBE cube = {

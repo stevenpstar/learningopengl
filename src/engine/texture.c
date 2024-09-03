@@ -1,6 +1,6 @@
 #include "texture.h"
-#include "../glad/glad.h"
-#include "../stb_image.h"
+#include "../../dep/glad/glad.h"
+#include "../../dep/stb_image.h"
 unsigned int loadTexture(const char *path) {
   unsigned int texture;
   glGenTextures(1, &texture);

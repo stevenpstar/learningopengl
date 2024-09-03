@@ -1,8 +1,7 @@
 #include "camera.h"
-#include "../linmath.h"
-#include "../glad/glad.h"
+#include "../../dep/linmath.h"
+#include "../../dep/glad/glad.h"
 #include <math.h>
-#include <stdio.h>
 
 #define M_PI 3.14159265358979323846
 

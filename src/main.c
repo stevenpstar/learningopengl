@@ -2,10 +2,10 @@
 #include "../dep/GLFW/glfw3.h"
 #include <stdio.h>
 #include <stdbool.h>
-#include "../dep/util/primitives.h"
-#include "../dep/util/shader.h"
-#include "../dep/util/texture.h"
-#include "../dep/util/camera.h"
+#include "engine/primitives.h"
+#include "engine/shader.h"
+#include "engine/texture.h"
+#include "engine/camera.h"
 
 // globals
 double mouseX;
