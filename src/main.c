@@ -11,10 +11,33 @@
 double mouseX;
 double mouseY;
 Camera *activeCamera;
+Sprite *playerSprite;
 bool firstCamMove = false;
 bool updateProjection = true;
+bool perspective = true;
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
+vec3 lightPos = {0.0f, -2.0f, 0.0f};
+bool debugPrint44 = true;
+
+bool forwardDown = false;
+bool backDown = false;
+bool rightDown = false;
+bool leftDown = false;
+float tc = 0.0f;
+
+vec3 up = {0.0f, 1.0f, 0.0f};
+
+unsigned int VBO, lVBO, VAO, EBO, lightingVAO, shader, lightingShader, texture;
+
+void debug_PRINTMAT4(mat4x4 printme) {
+  printf("Mat4x4: %f, %f, %f, %f\n", printme[0][0], printme[0][1], printme[0][2], printme[0][3]);
+  printf("Mat4x4: %f, %f, %f, %f\n", printme[1][0], printme[1][1], printme[1][2], printme[1][3]);
+  printf("Mat4x4: %f, %f, %f, %f\n", printme[2][0], printme[2][1], printme[2][2], printme[2][3]);
+  printf("Mat4x4: %f, %f, %f, %f\n", printme[3][0], printme[3][1], printme[3][2], printme[3][3]);
+  printf("----");
+}
+
 void resizeWindow(GLFWwindow* window, int width, int height) {
   glViewport(0, 0, width, height);
 }
@@ -25,10 +48,71 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
   }
   // TESTING THE CHANGE OF FOV
   if (key == GLFW_KEY_F && action == GLFW_PRESS) {
-    setFOV(activeCamera->fov + 0.1f, activeCamera);
-    if (!updateProjection) {
-      updateProjection = true;
-    }
+//    setFOV(activeCamera->fov + 0.1f, activeCamera);
+//    if (!updateProjection) {
+//      updateProjection = true;
+//      perspective = !perspective;
+//      printf("Persp %d\n", perspective);
+//    }
+    GLint polygonMode[2];
+    glad_glGetIntegerv(GL_POLYGON_MODE, polygonMode);
+    if (polygonMode[0] == GL_LINE)
+      glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    else 
+      glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+  }
+  if (key == GLFW_KEY_N && action == GLFW_PRESS) {
+    playerSprite->currentFrame++;
+    SetFrame(playerSprite, playerSprite->currentFrame, VBO);
+    printf("playerSprite currentFrame %d\n", playerSprite->currentFrame);
+  }
+  if (key == GLFW_KEY_W && action == GLFW_PRESS) {
+    forwardDown = true;
+  } else if (key == GLFW_KEY_W && action == GLFW_RELEASE) {
+    forwardDown = false;
+  }
+  if (key == GLFW_KEY_S && action == GLFW_PRESS) {
+    backDown = true;
+  } else if (key == GLFW_KEY_S && action == GLFW_RELEASE) {
+    backDown = false;
+  }
+  if (key == GLFW_KEY_A && action == GLFW_PRESS) {
+    leftDown = true;
+  } else if (key == GLFW_KEY_A && action == GLFW_RELEASE) {
+    leftDown = false;
+  }
+  if (key == GLFW_KEY_D && action == GLFW_PRESS) {
+    rightDown = true;
+  } else if (key == GLFW_KEY_D && action == GLFW_RELEASE) {
+    rightDown = false;
+  }
+}
+
+void processCamMovement() {
+  vec3 camFront = {0.0f, 0.0f, -1.0f};
+  vec3 nFront;
+  if (forwardDown) {
+    vec3_scale(nFront, activeCamera->direction, 0.025f);
+    vec3_add(activeCamera->position, activeCamera->position, nFront);
+  }
+  if (backDown) {
+    vec3_scale(nFront, activeCamera->direction, -0.025f);
+    vec3_add(activeCamera->position, activeCamera->position, nFront);
+  }
+  if (leftDown) {
+    vec3 cross;
+    vec3_mul_cross(cross, activeCamera->direction, up);
+    vec3_norm(cross, cross);
+    vec3_scale(cross, cross, -0.025f);
+    vec3_add(activeCamera->position, activeCamera->position, cross);
+  }
+  if (rightDown) {
+    vec3 cross;
+    vec3_mul_cross(cross, activeCamera->direction, up);
+    vec3_norm(cross, cross);
+    vec3_scale(cross, cross, 0.025f);
+    vec3_add(activeCamera->position, activeCamera->position, cross);
   }
 }
 
@@ -69,51 +153,62 @@ int main(void) {
     return -1;
   }
 
-  unsigned int VBO, VAO, shader, texture;
   glGenVertexArrays(1, &VAO);
   glGenBuffers(1, &VBO);
+  glGenBuffers(1, &EBO);
   glBindVertexArray(VAO);
-  P_CUBE cube = createCube(VBO);
-  P_CUBE cube2 = createCube(VBO);
-  cube2.posY = 1.5f;
-  P_CUBE cubes[2] = {cube, cube2};
-  vec3 pos = {0.0f, 0.0f, -3.0f};
+  vec3 pos = {0.0f, 0.0f, -10.0f};
   vec3 target = {0.0f, 0.0f, 0.0f};
   Camera cam = createCamera(pos, target, 2.5f);
   activeCamera = &cam;
-  texture = loadTexture("res/placeholder.png");
-
   shader = createShader("./src/shaders/vertex.vert", 
       "./src/shaders/fragment.frag");
+  texture = loadTexture("res/placeholder.png");
 
-  // load texture into shader
+  Sprite player = createAnimatedSprite(VBO, EBO, 0.0f, 0.0f, -12.0f, "res/Prototype_Character.png",
+      32, 32, 128, 384); 
+  playerSprite = &player;
+  //P_CUBE cube = createCube(VBO);
+  GLint bufsize = 0;
+  float data[24];
+  glGetBufferParameteriv(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_SIZE, &bufsize);
+  printf("bufsize: %d\n", bufsize);
+  glGetBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, bufsize, data);
+  for (int i=0;i<24;i++) {
+    printf("bufsize: %f\n", data[i]);
+  }
   glUseProgram(shader);
   glUniform1i(glGetUniformLocation(shader, "tex1"), 0);
-  glUniform1i(glGetUniformLocation(shader, "tex2"), 1);
+
+  // load texture into shader
 
   glEnable(GL_DEPTH_TEST);
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   glViewport(0, 0, 800, 600);
   glfwSetFramebufferSizeCallback(window, resizeWindow);
   glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
   glfwSetCursorPosCallback(window, mouseMove);
   glfwSetKeyCallback(window, keyCallback);
   // Set projection before game loop
-  while (!glfwWindowShouldClose(window)) {
-    if (updateProjection) {
-      setProjection(shader, "proj", activeCamera);
-      updateProjection = false;
-    }
-    float currentFrame = glfwGetTime();
+  float currentFrame = glfwGetTime();
     deltaTime = currentFrame - lastFrame;
     lastFrame = currentFrame;
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+  while (!glfwWindowShouldClose(window)) {
+    if (updateProjection) {
+      glUseProgram(shader);
+      setProjection(shader, "proj", activeCamera, perspective);
+      updateProjection = false;
+    }
+    processCamMovement();
+      glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    // This isn't right
     glUseProgram(shader);
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, texture);
-    // this should be per model
+    glBindTexture(GL_TEXTURE_2D, player.texture);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, player.texture);
 
     // camera
     vec3 lookAhead;
@@ -122,26 +217,29 @@ int main(void) {
     mat4x4_identity(view);
     mat4x4_translate_in_place(view, cam.position[0], cam.position[1], 
         cam.position[2]);
-    vec3 up = {0.0f, 1.0f, 0.0f};
     mat4x4_look_at(view, cam.position, lookAhead, up);
 
     unsigned int viewLoc = glGetUniformLocation(shader, "view");
     glUniformMatrix4fv(viewLoc, 1, GL_FALSE, (GLfloat *)view);
 
-    for (int i=0;i<2;i++) {
-      mat4x4 model;
-      mat4x4_identity(model);
-      mat4x4_translate_in_place(model, cubes[i].posX, cubes[i].posY, cubes[i].posZ);
-      mat4x4_rotate(model, model, 0.0f, 1.0f, 0.0f, (float)glfwGetTime() * 0.9995);
-      unsigned int modelLoc = glGetUniformLocation(shader, "model");
-      glUniformMatrix4fv(modelLoc, 1, GL_FALSE, (GLfloat *)model);
-      glDrawArrays(GL_TRIANGLES, 0, 36);
-    }
+    mat4x4 model;
+    mat4x4_identity(model);
+    mat4x4_translate_in_place(model, player.posX, player.posY, player.posZ);
+    unsigned int modelLoc = glGetUniformLocation(shader, "model");
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, (GLfloat *)model);
+
+    glUseProgram(shader);
+    glBindVertexArray(VAO);
+   // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+  //  glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
     glfwSwapBuffers(window);
     glfwPollEvents();
   }
-
+  glDeleteVertexArrays(1, &VAO);
+  glDeleteBuffers(1, &VBO);
+  glDeleteBuffers(1, &EBO);
   glfwTerminate();
   return 0;
 }

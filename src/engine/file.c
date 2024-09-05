@@ -15,13 +15,7 @@ char* readFile(FILE *fp) {
     printf("Memory error callocing buffer (readFile)\n");
     return buffer;
   }
-
   fread(buffer, sizeof(char), numBytes, fp);
-
-  // TODO: Remove this
-  printf("%s\n", buffer);
-  //
-
   return buffer;
 }
 
