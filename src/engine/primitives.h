@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #ifndef H_PRIMITIVES
 #define H_PRIMITIVES
 typedef struct P_CUBE {
@@ -8,10 +9,9 @@ typedef struct P_CUBE {
 } P_CUBE;
 
 typedef struct Animation {
-  int id;
+  int state;
   int startFrame;
-  int frameCount;
-  int active;
+  int endFrame;
 } Animation;
 
 typedef struct Sprite {
@@ -42,6 +42,6 @@ P_CUBE_LIGHT createCubeLight(unsigned int VBO, float x, float y, float z);
 Sprite createSprite(unsigned int VBO, const char *tex);
 Sprite createAnimatedSprite(unsigned int VBO, unsigned int EBO, float x, float y, float z, const char *tex, int frameWidth,
     int frameHeight, int texWidth, int texHeight);
-void SetFrame(Sprite *sprite, int frame, unsigned int VBO);
+void SetFrame(Sprite *sprite, int frame, unsigned int VBO, bool flipHorizontal);
 
 #endif

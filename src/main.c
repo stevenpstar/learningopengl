@@ -2,16 +2,25 @@
 #include "../dep/GLFW/glfw3.h"
 #include <stdio.h>
 #include <stdbool.h>
+// engine files
 #include "engine/primitives.h"
 #include "engine/shader.h"
 #include "engine/texture.h"
 #include "engine/camera.h"
+// game files
+#include "game/Player.h"
 
 // globals
 double mouseX;
 double mouseY;
 Camera *activeCamera;
 Sprite *playerSprite;
+Player *activePlayer;
+Animation playerAnim = {
+  .state = IDLE_DOWN,
+  .startFrame = 0,
+  .endFrame = 1,
+};
 bool firstCamMove = false;
 bool updateProjection = true;
 bool perspective = true;
@@ -20,6 +29,7 @@ float lastFrame = 0.0f;
 vec3 lightPos = {0.0f, -2.0f, 0.0f};
 bool debugPrint44 = true;
 
+bool idle = true;
 bool forwardDown = false;
 bool backDown = false;
 bool rightDown = false;
@@ -64,7 +74,7 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
   }
   if (key == GLFW_KEY_N && action == GLFW_PRESS) {
     playerSprite->currentFrame++;
-    SetFrame(playerSprite, playerSprite->currentFrame, VBO);
+    SetFrame(playerSprite, playerSprite->currentFrame, VBO, false);
     printf("playerSprite currentFrame %d\n", playerSprite->currentFrame);
   }
   if (key == GLFW_KEY_W && action == GLFW_PRESS) {
@@ -114,6 +124,70 @@ void processCamMovement() {
     vec3_scale(cross, cross, 0.025f);
     vec3_add(activeCamera->position, activeCamera->position, cross);
   }
+  if (!forwardDown && !backDown && !leftDown && !rightDown) {
+    idle = true;
+  } else {
+    idle = false;
+  }
+}
+
+void processPlayerMovement(float deltaTime) {
+  float playerSpeed = 1.f;
+  if (forwardDown) {
+    if (playerAnim.state != RUN_UP) {
+      playerAnim.state = RUN_UP;
+      playerAnim.startFrame = 20;
+      playerAnim.endFrame = 23;
+    }
+    activePlayer->y += playerSpeed * deltaTime;
+  }
+  if (backDown) {
+    if (playerAnim.state != RUN_DOWN) {
+      playerAnim.state = RUN_DOWN;
+      playerAnim.startFrame = 12;
+      playerAnim.endFrame = 15;
+    }
+    activePlayer->y -= playerSpeed * deltaTime;
+  }
+  if (leftDown) {
+    if (playerAnim.state != RUN_LEFT) {
+      playerAnim.state = RUN_LEFT;
+      playerAnim.startFrame = 16;
+      playerAnim.endFrame = 19;
+    }
+
+    activePlayer->x -= playerSpeed * deltaTime;
+  }
+  if (rightDown) {
+  if (playerAnim.state != RUN_RIGHT) {
+      playerAnim.state = RUN_RIGHT;
+      playerAnim.startFrame = 16;
+      playerAnim.endFrame = 19;
+    }
+    activePlayer->x += playerSpeed * deltaTime;
+  }
+  if (!forwardDown && !backDown && !leftDown && !rightDown) {
+    if (playerAnim.state == RUN_UP) {
+      playerAnim.state = IDLE_UP;
+      playerAnim.startFrame = 8;
+      playerAnim.endFrame = 9;
+    }
+    else if (playerAnim.state == RUN_RIGHT) {
+      playerAnim.state = IDLE_RIGHT;
+      playerAnim.startFrame = 4;
+      playerAnim.endFrame = 5;
+    }
+    else if (playerAnim.state == RUN_LEFT) {
+      playerAnim.state = IDLE_LEFT;
+      playerAnim.startFrame = 4;
+      playerAnim.endFrame = 5;
+    }
+    else if (playerAnim.state == RUN_DOWN) {
+      playerAnim.state = IDLE_DOWN;
+      playerAnim.startFrame = 0;
+      playerAnim.endFrame = 1;
+    }
+  }
 }
 
 void mouseMove(GLFWwindow* window, double xpos, double ypos) {
@@ -157,7 +231,7 @@ int main(void) {
   glGenBuffers(1, &VBO);
   glGenBuffers(1, &EBO);
   glBindVertexArray(VAO);
-  vec3 pos = {0.0f, 0.0f, -10.0f};
+  vec3 pos = {0.0f, 0.0f, -5.0f};
   vec3 target = {0.0f, 0.0f, 0.0f};
   Camera cam = createCamera(pos, target, 2.5f);
   activeCamera = &cam;
@@ -168,6 +242,16 @@ int main(void) {
   Sprite player = createAnimatedSprite(VBO, EBO, 0.0f, 0.0f, -12.0f, "res/Prototype_Character.png",
       32, 32, 128, 384); 
   playerSprite = &player;
+  Player playerObj = {
+    .x = 0.0f,
+    .y = 0.0f,
+    .z = -12.0f,
+    .sprite = &player,
+    .state = 0,
+    .framerate = 8,
+    .frameTimer = 0.0f,
+  };
+  activePlayer = &playerObj;
   //P_CUBE cube = createCube(VBO);
   GLint bufsize = 0;
   float data[24];
@@ -191,16 +275,19 @@ int main(void) {
   glfwSetCursorPosCallback(window, mouseMove);
   glfwSetKeyCallback(window, keyCallback);
   // Set projection before game loop
-  float currentFrame = glfwGetTime();
+  while (!glfwWindowShouldClose(window)) {
+    float currentFrame = glfwGetTime();
     deltaTime = currentFrame - lastFrame;
     lastFrame = currentFrame;
-  while (!glfwWindowShouldClose(window)) {
+
     if (updateProjection) {
       glUseProgram(shader);
       setProjection(shader, "proj", activeCamera, perspective);
       updateProjection = false;
     }
-    processCamMovement();
+//    processCamMovement();
+    processPlayerMovement(deltaTime);
+    Animate(&playerObj, playerAnim, true, deltaTime, VBO);
       glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -224,7 +311,7 @@ int main(void) {
 
     mat4x4 model;
     mat4x4_identity(model);
-    mat4x4_translate_in_place(model, player.posX, player.posY, player.posZ);
+    mat4x4_translate_in_place(model, playerObj.x, playerObj.y, playerObj.z);
     unsigned int modelLoc = glGetUniformLocation(shader, "model");
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, (GLfloat *)model);
 

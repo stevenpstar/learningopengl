@@ -157,7 +157,7 @@ Sprite createAnimatedSprite(unsigned int VBO, unsigned int EBO,
       .frameTime = 0.0f
     };
 
-  SetFrame(&animSprite, animSprite.currentFrame, VBO);
+  SetFrame(&animSprite, animSprite.currentFrame, VBO, false);
 
   unsigned int t = loadTexture(tex);
   animSprite.texture = t;
@@ -165,12 +165,12 @@ Sprite createAnimatedSprite(unsigned int VBO, unsigned int EBO,
   return animSprite;
 }
 
-void SetFrame(Sprite *sprite, int frame, unsigned int VBO) {
+void SetFrame(Sprite *sprite, int frame, unsigned int VBO, bool flipHorizontal) {
   float fw = sprite->frameWidth * sprite->currentFrame;
   int rowNum = floor(fw / sprite->texWidth);
   int colNum = (fw - (rowNum * sprite->texWidth)) / sprite->frameWidth;
-  printf("rowNum: %d\n", rowNum);
-  printf("colNum: %d\n", colNum);
+ // printf("rowNum: %d\n", rowNum);
+ // printf("colNum: %d\n", colNum);
   float row = ((float)rowNum * sprite->frameHeight) / sprite->texHeight;
   float col = (fw - (rowNum * sprite->frameWidth));// / texWidth;
   float normWidth = (float)sprite->frameWidth / (float)sprite->texWidth;
@@ -180,8 +180,12 @@ void SetFrame(Sprite *sprite, int frame, unsigned int VBO) {
   float bottomY = 1.0 - (normHeight * rowNum) - normHeight;
   float left = 0.0 + normWidth * colNum;
   float right = 0.0 + (normWidth * colNum) + normWidth;
-  printf("top: %f, bottom: %f, left: %f, right: %f\n", topY, bottomY, left, right);
-
+  //printf("top: %f, bottom: %f, left: %f, right: %f\n", topY, bottomY, left, right);
+  if (flipHorizontal) {
+    float temp = left;
+    left = right;
+    right = temp;
+  }
   // bottom left
   sprite->data[3] = left;
   sprite->data[4] = bottomY;
