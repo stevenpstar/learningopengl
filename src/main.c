@@ -1,14 +1,20 @@
 #include "../dep/glad/glad.h"
 #include "../dep/GLFW/glfw3.h"
 #include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
 #include <stdbool.h>
+#include <math.h>
 // engine files
 #include "engine/primitives.h"
 #include "engine/shader.h"
 #include "engine/texture.h"
 #include "engine/camera.h"
+#include "engine/collision.h"
 // game files
 #include "game/Player.h"
+#include "game/tile.h"
+
 
 // globals
 double mouseX;
@@ -36,9 +42,24 @@ bool rightDown = false;
 bool leftDown = false;
 float tc = 0.0f;
 
+Bounds boundsA = {
+  .x = 0.0f,
+  .y = 0.0f,
+  .width = 0.0f,
+  .height = 0.0f
+};
+
+Bounds boundsB = {
+  .x = 0.0f,
+  .y = 0.0f,
+  .width = 0.0f,
+  .height = 0.0f
+};
+
 vec3 up = {0.0f, 1.0f, 0.0f};
 
-unsigned int VBO, lVBO, VAO, EBO, lightingVAO, shader, lightingShader, texture;
+unsigned int VBO, worldVBO, lVBO, VAO, EBO, lightingVAO, shader, lightingShader, texture;
+int tiles[1024] = {0};
 
 void debug_PRINTMAT4(mat4x4 printme) {
   printf("Mat4x4: %f, %f, %f, %f\n", printme[0][0], printme[0][1], printme[0][2], printme[0][3]);
@@ -132,14 +153,35 @@ void processCamMovement() {
 }
 
 void processPlayerMovement(float deltaTime) {
-  float playerSpeed = 1.f;
+  float playerSpeed = 2.f;
+  float diagonalMod = 0.70710678118;
+
+  boundsA.width = 0.5f;
+  boundsA.height = 0.5f;
+  boundsA.x = activePlayer->x;
+  boundsA.y = activePlayer->y;
+
+  boundsB.width = 0.5f;
+  boundsB.height = 0.5f;
+  boundsB.x = 1.0f;
+  boundsB.y = 1.0f;
+
+  if (forwardDown && rightDown || forwardDown && leftDown ||
+      backDown && rightDown || backDown && leftDown) {
+    playerSpeed *= diagonalMod;
+  }
   if (forwardDown) {
     if (playerAnim.state != RUN_UP) {
       playerAnim.state = RUN_UP;
       playerAnim.startFrame = 20;
       playerAnim.endFrame = 23;
     }
-    activePlayer->y += playerSpeed * deltaTime;
+    if (!IsColliding(&boundsA, &boundsB)) {
+      activePlayer->y += playerSpeed * deltaTime;
+      activeCamera->position[1] = activePlayer->y;
+    } else {
+      printf("Collided!");
+    }
   }
   if (backDown) {
     if (playerAnim.state != RUN_DOWN) {
@@ -148,6 +190,7 @@ void processPlayerMovement(float deltaTime) {
       playerAnim.endFrame = 15;
     }
     activePlayer->y -= playerSpeed * deltaTime;
+    activeCamera->position[1] = activePlayer->y;
   }
   if (leftDown) {
     if (playerAnim.state != RUN_LEFT) {
@@ -157,6 +200,7 @@ void processPlayerMovement(float deltaTime) {
     }
 
     activePlayer->x -= playerSpeed * deltaTime;
+    activeCamera->position[0] = activePlayer->x;
   }
   if (rightDown) {
   if (playerAnim.state != RUN_RIGHT) {
@@ -165,6 +209,7 @@ void processPlayerMovement(float deltaTime) {
       playerAnim.endFrame = 19;
     }
     activePlayer->x += playerSpeed * deltaTime;
+    activeCamera->position[0] = activePlayer->x;
   }
   if (!forwardDown && !backDown && !leftDown && !rightDown) {
     if (playerAnim.state == RUN_UP) {
@@ -207,6 +252,7 @@ void mouseMove(GLFWwindow* window, double xpos, double ypos) {
 }
 
 int main(void) {
+  srand(time(NULL));
   glfwInit();
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -228,10 +274,12 @@ int main(void) {
   }
 
   glGenVertexArrays(1, &VAO);
+  glGenVertexArrays(1, &lightingVAO);
   glGenBuffers(1, &VBO);
+  glGenBuffers(1, &worldVBO);
   glGenBuffers(1, &EBO);
   glBindVertexArray(VAO);
-  vec3 pos = {0.0f, 0.0f, -5.0f};
+  vec3 pos = {0.0f, 0.0f, 0.0f};
   vec3 target = {0.0f, 0.0f, 0.0f};
   Camera cam = createCamera(pos, target, 2.5f);
   activeCamera = &cam;
@@ -251,6 +299,16 @@ int main(void) {
     .framerate = 8,
     .frameTimer = 0.0f,
   };
+  glBindVertexArray(lightingVAO);
+
+  unsigned int leveltex = loadTextureRGB("res/testlevelp.png");
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, leveltex);
+  GLubyte pixels[32*32*3] = {0};
+  glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, &pixels);
+  glGetError();
+
+  unsigned int worldTex = createWorld(tiles, "res/floortiles.png", pixels);
   activePlayer = &playerObj;
   //P_CUBE cube = createCube(VBO);
   GLint bufsize = 0;
@@ -271,10 +329,20 @@ int main(void) {
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   glViewport(0, 0, 800, 600);
   glfwSetFramebufferSizeCallback(window, resizeWindow);
-  glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-  glfwSetCursorPosCallback(window, mouseMove);
+  //glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+  //glfwSetCursorPosCallback(window, mouseMove);
   glfwSetKeyCallback(window, keyCallback);
   // Set projection before game loop
+  float planeData[30] = {
+    -0.5f, -0.5f, -0.0f,  0.0f, 1.0 - 0.083333f,//0.0f, // bottom left
+     0.5f, -0.5f, -0.0f,  0.25f, 1.0 - 0.083333f, // bottom right
+     0.5f,  0.5f, -0.0f,  0.25f, 1.f, // top right
+     0.5f,  0.5f, -0.0f,  0.25f, 1.f, // top right duplicate (ignore and/or change to be same not sure)
+    -0.5f,  0.5f, -0.0f,  0.0f, 1.0f, // top left
+    -0.5f, -0.5f, -0.0f,  0.0f, 1.0 - 0.083333f, // bottom left duplicate     
+  };
+
+
   while (!glfwWindowShouldClose(window)) {
     float currentFrame = glfwGetTime();
     deltaTime = currentFrame - lastFrame;
@@ -287,15 +355,15 @@ int main(void) {
     }
 //    processCamMovement();
     processPlayerMovement(deltaTime);
+    glBindVertexArray(VAO);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, player.texture);
+
     Animate(&playerObj, playerAnim, true, deltaTime, VBO);
-      glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     glUseProgram(shader);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, player.texture);
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, player.texture);
 
     // camera
     vec3 lookAhead;
@@ -308,16 +376,37 @@ int main(void) {
 
     unsigned int viewLoc = glGetUniformLocation(shader, "view");
     glUniformMatrix4fv(viewLoc, 1, GL_FALSE, (GLfloat *)view);
+    glUseProgram(shader);
+    glBindVertexArray(lightingVAO);
+    for (int i=0;i<1024;i++) {
+      int row = floor((float)i / 32);
+      int col = i - (32 * row);
+     // printf("row %d, col: %d\n", row, col);
+      setTileData(tiles[i], 16, 112, 112, pixels, planeData, worldVBO);
+      mat4x4 tile;
+      mat4x4_identity(tile);
+      mat4x4_translate_in_place(tile, col * 0.5f, row * 0.5f, -13.0f);
+      //mat4x4_scale(tile, tile, 0.2f);
+      mat4x4_scale_aniso(tile, tile, 0.5f, 0.5f, 0.5f);
+      unsigned int modelLoc = glGetUniformLocation(shader, "model");
+      glUniformMatrix4fv(modelLoc, 1, GL_FALSE, (GLfloat *)tile);
+      glActiveTexture(GL_TEXTURE0);
+      glBindTexture(GL_TEXTURE_2D, worldTex);
 
+      glDrawArrays(GL_TRIANGLES, 0, 6);
+    }
+    glBindVertexArray(VAO);
     mat4x4 model;
     mat4x4_identity(model);
     mat4x4_translate_in_place(model, playerObj.x, playerObj.y, playerObj.z);
     unsigned int modelLoc = glGetUniformLocation(shader, "model");
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, (GLfloat *)model);
 
-    glUseProgram(shader);
-    glBindVertexArray(VAO);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, player.texture);
+
    // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+   // Rendering Player
     glDrawArrays(GL_TRIANGLES, 0, 6);
   //  glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
@@ -326,6 +415,7 @@ int main(void) {
   }
   glDeleteVertexArrays(1, &VAO);
   glDeleteBuffers(1, &VBO);
+  glDeleteBuffers(1, &worldVBO);
   glDeleteBuffers(1, &EBO);
   glfwTerminate();
   return 0;
