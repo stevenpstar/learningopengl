@@ -54,5 +54,5 @@ Sprite createSprite(unsigned int VBO, const char *tex);
 Sprite createAnimatedSprite(unsigned int VBO, unsigned int EBO, float x, float y, float z, const char *tex, int frameWidth,
     int frameHeight, int texWidth, int texHeight);
 void SetFrame(Sprite *sprite, int frame, unsigned int VBO, bool flipHorizontal);
-
+void setCubeLight(unsigned int VBO, float *vertices);
 #endif

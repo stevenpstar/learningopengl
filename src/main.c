@@ -131,28 +131,38 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
 }
 
 void processCamMovement() {
-  vec3 camFront = {0.0f, 0.0f, -1.0f};
+  vec3 camFront;
+  if (fpsMode) {
+    camFront[0] = 0.0f;
+    camFront[1] = 0.0f;
+    camFront[2] = -1.0f;
+  } else {
+    camFront[0] = 0.0f;
+    camFront[1] = -1.0f;
+    camFront[2] = 0.0f;
+  }
   vec3 nFront;
+  vec3 pos = {activeCamera->position[0], 0.25f, activeCamera->position[2]};
   if (forwardDown) {
     vec3_scale(nFront, activeCamera->direction, 0.025f);
-    vec3_add(activeCamera->position, activeCamera->position, nFront);
+    vec3_add(activeCamera->position, pos, nFront);
   }
   if (backDown) {
     vec3_scale(nFront, activeCamera->direction, -0.025f);
-    vec3_add(activeCamera->position, activeCamera->position, nFront);
+    vec3_add(activeCamera->position, pos, nFront);
   }
   if (leftDown) {
     vec3 cross;
     vec3_mul_cross(cross, activeCamera->direction, up);
     vec3_norm(cross, cross);
-    vec3_scale(cross, cross, -0.025f);
+    vec3_scale(cross, cross, -0.0125f);
     vec3_add(activeCamera->position, activeCamera->position, cross);
   }
   if (rightDown) {
     vec3 cross;
     vec3_mul_cross(cross, activeCamera->direction, up);
     vec3_norm(cross, cross);
-    vec3_scale(cross, cross, 0.025f);
+    vec3_scale(cross, cross, 0.0125f);
     vec3_add(activeCamera->position, activeCamera->position, cross);
   }
   if (!forwardDown && !backDown && !leftDown && !rightDown) {
@@ -163,6 +173,7 @@ void processCamMovement() {
 }
 
 void processPlayerMovement(float deltaTime) {
+  if (fpsMode) { return; }
   float playerSpeed = 2.f;
   float diagonalMod = 0.70710678118;
 
@@ -179,7 +190,7 @@ void processPlayerMovement(float deltaTime) {
       playerAnim.startFrame = 20;
       playerAnim.endFrame = 23;
     }
-    mVert = 1;
+    mVert = -1;
   //  activePlayer->y += playerSpeed * deltaTime;
   //  activeCamera->position[1] = activePlayer->y;
   }
@@ -189,7 +200,7 @@ void processPlayerMovement(float deltaTime) {
       playerAnim.startFrame = 12;
       playerAnim.endFrame = 15;
     }
-    mVert = -1;
+    mVert = 1;
 //    activePlayer->y -= playerSpeed * deltaTime;
 //    activeCamera->position[1] = activePlayer->y;
   }
@@ -254,9 +265,11 @@ void processPlayerMovement(float deltaTime) {
 
   if (!IsColliding(&boundsA, &boundsB) || !checkCollide) {
     activePlayer->x += mHoriz * playerSpeed * deltaTime;
-    activeCamera->position[0] = activePlayer->x;
-    activePlayer->y += mVert * playerSpeed * deltaTime;
-    activeCamera->position[1] = activePlayer->y;
+    activePlayer->z += mVert * playerSpeed * deltaTime;
+    if (!fpsMode) {
+      activeCamera->position[0] = -activePlayer->x;
+      activeCamera->position[1] = activePlayer->z;
+    }
   }
 }
 
@@ -304,14 +317,15 @@ int main(void) {
   glGenBuffers(1, &VBO);
   glGenBuffers(1, &CubeVBO);
   glGenBuffers(1, &worldVBO);
+  glGenBuffers(1, &lVBO);
   glGenBuffers(1, &EBO);
   glBindVertexArray(VAO);
-  vec3 pos = {0.0f, 0.0f, -6.0f};
-  vec3 fpsPos = {0.0f, 0.0f, -12.75f};
+  vec3 pos = {0.0f, 0.0f, -10.0f};
+  vec3 fpsPos = {0.0f, 0.25f, 0.0f};
   vec3 target = {0.0f, 0.0f, 0.0f};
   Camera cam = createCamera(pos, target, 2.5f);
   Camera FPScam = createCamera(fpsPos, target, 2.5f);
-  FPScam.pitch = 90.0f;
+//  FPScam.pitch = 90.0f;
   activeCamera = &cam;
   shader = createShader("./src/shaders/vertex.vert", 
       "./src/shaders/fragment.frag");
@@ -322,8 +336,8 @@ int main(void) {
   playerSprite = &player;
   Player playerObj = {
     .x = 0.0f,
-    .y = 0.0f,
-    .z = -12.0f,
+    .y = 0.25f,
+    .z = 0.0f,
     .sprite = &player,
     .state = 0,
     .framerate = 8,
@@ -341,6 +355,7 @@ int main(void) {
   unsigned int worldTex = createWorld(tiles, "res/floortiles.png", pixels);
   activePlayer = &playerObj;
   P_CUBE cube = createCube(CubeVBO);
+  P_CUBE_LIGHT lcube = createCubeLight(lVBO, 0.0f, 0.0f, 0.0f);
   GLint bufsize = 0;
   float data[24];
   glGetBufferParameteriv(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_SIZE, &bufsize);
@@ -387,7 +402,9 @@ int main(void) {
       setProjection(shader, "proj", activeCamera, perspective, windowWidth, windowHeight);
       updateProjection = false;
     }
-    //processCamMovement();
+    if (fpsMode) {
+      processCamMovement();
+    }
     processPlayerMovement(deltaTime);
     glBindVertexArray(VAO);
     glActiveTexture(GL_TEXTURE0);
@@ -406,7 +423,11 @@ int main(void) {
     mat4x4_identity(view);
     mat4x4_translate_in_place(view, activeCamera->position[0], activeCamera->position[1], 
         activeCamera->position[2]);
-    mat4x4_look_at(view, activeCamera->position, lookAhead, up);
+    if (fpsMode) {
+      mat4x4_look_at(view, activeCamera->position, lookAhead, up);
+    } else {
+      mat4x4_rotate(view, view, 1.0f, 0.0f, 0.0f, degToRad(90.0f) );
+    }
 
     unsigned int viewLoc = glGetUniformLocation(shader, "view");
     glUniformMatrix4fv(viewLoc, 1, GL_FALSE, (GLfloat *)view);
@@ -421,30 +442,49 @@ int main(void) {
       mat4x4 tile;
       mat4x4_identity(tile);
       if (tiles[i] != 34) {
-        mat4x4_translate_in_place(tile, col * 0.5f, row * 0.5f, -13.0f);
+        mat4x4_translate_in_place(tile, col * 0.5f, 0.0f, row * 0.5f);
+        mat4x4_rotate(tile, tile, 1.0f, 0.0f, 0.0f, degToRad(90.0f));
         mat4x4_scale_aniso(tile, tile, 0.5f, 0.5f, 0.5f);
         unsigned int modelLoc = glGetUniformLocation(shader, "model");
         glUniformMatrix4fv(modelLoc, 1, GL_FALSE, (GLfloat *)tile);
-
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, worldTex);
         glDrawArrays(GL_TRIANGLES, 0, 6);
       } else {
-        mat4x4_translate_in_place(tile, col * 0.5f, row * 0.5f, -12.75f);
-        mat4x4_scale_aniso(tile, tile, 0.5f, 0.5f, 0.5f);
-        unsigned int modelLoc = glGetUniformLocation(shader, "model");
-        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, (GLfloat *)tile);
+        resetTileTexCoords(planeData, worldVBO);
+        // mega scuffed
+        for (int c=0;c<4;c++) {
+          mat4x4_identity(tile);
+          if (c == 0) {
+            mat4x4_translate_in_place(tile, (col * 0.5f), 0.25f, (row * 0.5f) - 0.25f);
+          }
+          if (c == 1) {
+            mat4x4_translate_in_place(tile, (col * 0.5f), 0.25f, (row * 0.5f) + 0.25f);
+          }
+          if (c == 2) {
+            mat4x4_translate_in_place(tile, (col * 0.5f) - 0.25f, 0.25f, (row * 0.5f));
+            mat4x4_rotate(tile, tile, 0.0f, 1.0f, 0.0f, degToRad(90.0f));
+          }
+          if (c == 3) {
+            mat4x4_translate_in_place(tile, (col * 0.5f) + 0.25f, 0.25f, (row * 0.5f));
+            mat4x4_rotate(tile, tile, 0.0f, 1.0f, 0.0f, degToRad(90.0f));
+          }
+          mat4x4_scale_aniso(tile, tile, 0.5f, 0.5f, 0.5f);
+          unsigned int modelLoc = glGetUniformLocation(shader, "model");
+          glUniformMatrix4fv(modelLoc, 1, GL_FALSE, (GLfloat *)tile);
 
-        updateCubeVBO(CubeVBO, &cube);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, texture);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
+  //        updateCubeVBO(CubeVBO, &cube);
+          glActiveTexture(GL_TEXTURE0);
+          glBindTexture(GL_TEXTURE_2D, texture);
+          glDrawArrays(GL_TRIANGLES, 0, 6);
+        }
      }
     }
     glBindVertexArray(VAO);
     mat4x4 model;
     mat4x4_identity(model);
     mat4x4_translate_in_place(model, playerObj.x, playerObj.y, playerObj.z);
+    mat4x4_rotate(model, model, 1.0f, 0.0f, 0.0f, degToRad(-90.0f));
     unsigned int modelLoc = glGetUniformLocation(shader, "model");
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, (GLfloat *)model);
 
@@ -455,6 +495,10 @@ int main(void) {
    // Rendering Player
     glDrawArrays(GL_TRIANGLES, 0, 6);
   //  glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+    //rendering light source cubes
+   // setCubeLight(lVBO, lcube.vertices);
+  //  glDrawArrays(GL_TRIANGLES, 0, 36);
 
     glfwSwapBuffers(window);
     glfwPollEvents();

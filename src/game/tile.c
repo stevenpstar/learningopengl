@@ -79,6 +79,41 @@ void setTileData(int i, int tileSize, int texWidth, int texHeight, GLubyte *pixe
   glEnableVertexAttribArray(2);
 }
 
+void resetTileTexCoords(float *data, unsigned int VBO) {
+  float topY = 1.0;
+  float bottomY = 0.0;
+  float left = 0.0;
+  float right = 1.0;
+  // bottom left
+  data[3] = left;
+  data[4] = bottomY;
+  // duplicate vertex bottom l
+  data[28] = left;
+  data[29] = bottomY;
+
+  // bottom right
+  data[8] = right;
+  data[9] = bottomY;
+
+  // top right
+  data[13] = right;
+  data[14] = topY;
+  data[18] = right;
+  data[19] = topY;
+
+  // top left
+  data[23] = left;
+  data[24] = topY;
+
+  glBindBuffer(GL_ARRAY_BUFFER, VBO);
+  glBufferData(GL_ARRAY_BUFFER, 32 * sizeof(float), data, GL_STATIC_DRAW);
+
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+  glEnableVertexAttribArray(0);
+  glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+  glEnableVertexAttribArray(2);
+}
+
 void getTileFromPosition(float x, float y, int *pos) {
   float tileDim = 0.5f;
   int tileX = floor(x / tileDim);
