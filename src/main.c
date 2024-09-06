@@ -19,6 +19,8 @@
 // globals
 double mouseX;
 double mouseY;
+int windowWidth = 800;
+int windowHeight = 600;
 Camera *activeCamera;
 Sprite *playerSprite;
 Player *activePlayer;
@@ -34,6 +36,7 @@ float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 vec3 lightPos = {0.0f, -2.0f, 0.0f};
 bool debugPrint44 = true;
+bool fpsMode = false;
 
 bool idle = true;
 bool forwardDown = false;
@@ -58,7 +61,7 @@ Bounds boundsB = {
 
 vec3 up = {0.0f, 1.0f, 0.0f};
 
-unsigned int VBO, worldVBO, lVBO, VAO, EBO, lightingVAO, shader, lightingShader, texture;
+unsigned int VBO, CubeVBO, worldVBO, lVBO, VAO, EBO, lightingVAO, shader, lightingShader, texture;
 int tiles[1024] = {0};
 
 void debug_PRINTMAT4(mat4x4 printme) {
@@ -71,6 +74,10 @@ void debug_PRINTMAT4(mat4x4 printme) {
 
 void resizeWindow(GLFWwindow* window, int width, int height) {
   glViewport(0, 0, width, height);
+  windowWidth = width;
+  windowHeight = height;
+  glUseProgram(shader);
+  setProjection(shader, "proj", activeCamera, perspective, windowWidth, windowHeight);
 }
 
 void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods) {
@@ -97,6 +104,9 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
     playerSprite->currentFrame++;
     SetFrame(playerSprite, playerSprite->currentFrame, VBO, false);
     printf("playerSprite currentFrame %d\n", playerSprite->currentFrame);
+  }
+  if (key == GLFW_KEY_TAB && action == GLFW_PRESS) {
+    fpsMode = !fpsMode;
   }
   if (key == GLFW_KEY_W && action == GLFW_PRESS) {
     forwardDown = true;
@@ -156,15 +166,8 @@ void processPlayerMovement(float deltaTime) {
   float playerSpeed = 2.f;
   float diagonalMod = 0.70710678118;
 
-  boundsA.width = 0.5f;
-  boundsA.height = 0.5f;
-  boundsA.x = activePlayer->x;
-  boundsA.y = activePlayer->y;
-
-  boundsB.width = 0.5f;
-  boundsB.height = 0.5f;
-  boundsB.x = 1.0f;
-  boundsB.y = 1.0f;
+  int mVert = 0;
+  int mHoriz = 0;
 
   if (forwardDown && rightDown || forwardDown && leftDown ||
       backDown && rightDown || backDown && leftDown) {
@@ -176,12 +179,9 @@ void processPlayerMovement(float deltaTime) {
       playerAnim.startFrame = 20;
       playerAnim.endFrame = 23;
     }
-    if (!IsColliding(&boundsA, &boundsB)) {
-      activePlayer->y += playerSpeed * deltaTime;
-      activeCamera->position[1] = activePlayer->y;
-    } else {
-      printf("Collided!");
-    }
+    mVert = 1;
+  //  activePlayer->y += playerSpeed * deltaTime;
+  //  activeCamera->position[1] = activePlayer->y;
   }
   if (backDown) {
     if (playerAnim.state != RUN_DOWN) {
@@ -189,8 +189,9 @@ void processPlayerMovement(float deltaTime) {
       playerAnim.startFrame = 12;
       playerAnim.endFrame = 15;
     }
-    activePlayer->y -= playerSpeed * deltaTime;
-    activeCamera->position[1] = activePlayer->y;
+    mVert = -1;
+//    activePlayer->y -= playerSpeed * deltaTime;
+//    activeCamera->position[1] = activePlayer->y;
   }
   if (leftDown) {
     if (playerAnim.state != RUN_LEFT) {
@@ -198,9 +199,9 @@ void processPlayerMovement(float deltaTime) {
       playerAnim.startFrame = 16;
       playerAnim.endFrame = 19;
     }
-
-    activePlayer->x -= playerSpeed * deltaTime;
-    activeCamera->position[0] = activePlayer->x;
+    mHoriz = -1;
+//    activePlayer->x -= playerSpeed * deltaTime;
+//    activeCamera->position[0] = activePlayer->x;
   }
   if (rightDown) {
   if (playerAnim.state != RUN_RIGHT) {
@@ -208,8 +209,9 @@ void processPlayerMovement(float deltaTime) {
       playerAnim.startFrame = 16;
       playerAnim.endFrame = 19;
     }
-    activePlayer->x += playerSpeed * deltaTime;
-    activeCamera->position[0] = activePlayer->x;
+    mHoriz = 1;
+//    activePlayer->x += playerSpeed * deltaTime;
+//    activeCamera->position[0] = activePlayer->x;
   }
   if (!forwardDown && !backDown && !leftDown && !rightDown) {
     if (playerAnim.state == RUN_UP) {
@@ -233,9 +235,33 @@ void processPlayerMovement(float deltaTime) {
       playerAnim.endFrame = 1;
     }
   }
+  vec2 nextPosition = {0};
+  nextPosition[0] = activePlayer->x + mHoriz * playerSpeed * deltaTime;
+  nextPosition[1] = activePlayer->y + mVert * playerSpeed * deltaTime;
+  boundsA.width = 0.5f;
+  boundsA.height = 0.5f;
+  boundsA.x = nextPosition[0];
+  boundsA.y = nextPosition[1];
+  int nextTile[2] = {0};
+  getTileFromPosition(nextPosition[0], nextPosition[1], nextTile);
+  int tileIndex = getIndexFromTile(nextTile[0], nextTile[1], 32);
+  bool checkCollide = tiles[tileIndex] == 34;
+
+  boundsB.width = 0.5f;
+  boundsB.height = 0.5f;
+  boundsB.x = nextTile[0] * 0.5f;
+  boundsB.y = nextTile[1] * 0.5f;
+
+  if (!IsColliding(&boundsA, &boundsB) || !checkCollide) {
+    activePlayer->x += mHoriz * playerSpeed * deltaTime;
+    activeCamera->position[0] = activePlayer->x;
+    activePlayer->y += mVert * playerSpeed * deltaTime;
+    activeCamera->position[1] = activePlayer->y;
+  }
 }
 
 void mouseMove(GLFWwindow* window, double xpos, double ypos) {
+  if (!fpsMode) { return; }
   if (firstCamMove) {
     mouseX = xpos;
     mouseY = ypos;
@@ -276,16 +302,20 @@ int main(void) {
   glGenVertexArrays(1, &VAO);
   glGenVertexArrays(1, &lightingVAO);
   glGenBuffers(1, &VBO);
+  glGenBuffers(1, &CubeVBO);
   glGenBuffers(1, &worldVBO);
   glGenBuffers(1, &EBO);
   glBindVertexArray(VAO);
-  vec3 pos = {0.0f, 0.0f, 0.0f};
+  vec3 pos = {0.0f, 0.0f, -6.0f};
+  vec3 fpsPos = {0.0f, 0.0f, -12.75f};
   vec3 target = {0.0f, 0.0f, 0.0f};
   Camera cam = createCamera(pos, target, 2.5f);
+  Camera FPScam = createCamera(fpsPos, target, 2.5f);
+  FPScam.pitch = 90.0f;
   activeCamera = &cam;
   shader = createShader("./src/shaders/vertex.vert", 
       "./src/shaders/fragment.frag");
-  texture = loadTexture("res/placeholder.png");
+  texture = loadTextureRGB("res/wall.png");
 
   Sprite player = createAnimatedSprite(VBO, EBO, 0.0f, 0.0f, -12.0f, "res/Prototype_Character.png",
       32, 32, 128, 384); 
@@ -310,7 +340,7 @@ int main(void) {
 
   unsigned int worldTex = createWorld(tiles, "res/floortiles.png", pixels);
   activePlayer = &playerObj;
-  //P_CUBE cube = createCube(VBO);
+  P_CUBE cube = createCube(CubeVBO);
   GLint bufsize = 0;
   float data[24];
   glGetBufferParameteriv(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_SIZE, &bufsize);
@@ -329,8 +359,8 @@ int main(void) {
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   glViewport(0, 0, 800, 600);
   glfwSetFramebufferSizeCallback(window, resizeWindow);
-  //glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-  //glfwSetCursorPosCallback(window, mouseMove);
+  glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+  glfwSetCursorPosCallback(window, mouseMove);
   glfwSetKeyCallback(window, keyCallback);
   // Set projection before game loop
   float planeData[30] = {
@@ -342,18 +372,22 @@ int main(void) {
     -0.5f, -0.5f, -0.0f,  0.0f, 1.0 - 0.083333f, // bottom left duplicate     
   };
 
-
   while (!glfwWindowShouldClose(window)) {
+    if (fpsMode) {
+      activeCamera = &FPScam;
+    } else {
+      activeCamera = &cam;
+    }
     float currentFrame = glfwGetTime();
     deltaTime = currentFrame - lastFrame;
     lastFrame = currentFrame;
 
     if (updateProjection) {
       glUseProgram(shader);
-      setProjection(shader, "proj", activeCamera, perspective);
+      setProjection(shader, "proj", activeCamera, perspective, windowWidth, windowHeight);
       updateProjection = false;
     }
-//    processCamMovement();
+    //processCamMovement();
     processPlayerMovement(deltaTime);
     glBindVertexArray(VAO);
     glActiveTexture(GL_TEXTURE0);
@@ -367,17 +401,18 @@ int main(void) {
 
     // camera
     vec3 lookAhead;
-    vec3_add(lookAhead, cam.position, cam.direction);
+    vec3_add(lookAhead, activeCamera->position, activeCamera->direction);
     mat4x4 view;
     mat4x4_identity(view);
-    mat4x4_translate_in_place(view, cam.position[0], cam.position[1], 
-        cam.position[2]);
-    mat4x4_look_at(view, cam.position, lookAhead, up);
+    mat4x4_translate_in_place(view, activeCamera->position[0], activeCamera->position[1], 
+        activeCamera->position[2]);
+    mat4x4_look_at(view, activeCamera->position, lookAhead, up);
 
     unsigned int viewLoc = glGetUniformLocation(shader, "view");
     glUniformMatrix4fv(viewLoc, 1, GL_FALSE, (GLfloat *)view);
     glUseProgram(shader);
     glBindVertexArray(lightingVAO);
+    glBindBuffer(GL_VERTEX_ARRAY, worldVBO);
     for (int i=0;i<1024;i++) {
       int row = floor((float)i / 32);
       int col = i - (32 * row);
@@ -385,15 +420,26 @@ int main(void) {
       setTileData(tiles[i], 16, 112, 112, pixels, planeData, worldVBO);
       mat4x4 tile;
       mat4x4_identity(tile);
-      mat4x4_translate_in_place(tile, col * 0.5f, row * 0.5f, -13.0f);
-      //mat4x4_scale(tile, tile, 0.2f);
-      mat4x4_scale_aniso(tile, tile, 0.5f, 0.5f, 0.5f);
-      unsigned int modelLoc = glGetUniformLocation(shader, "model");
-      glUniformMatrix4fv(modelLoc, 1, GL_FALSE, (GLfloat *)tile);
-      glActiveTexture(GL_TEXTURE0);
-      glBindTexture(GL_TEXTURE_2D, worldTex);
+      if (tiles[i] != 34) {
+        mat4x4_translate_in_place(tile, col * 0.5f, row * 0.5f, -13.0f);
+        mat4x4_scale_aniso(tile, tile, 0.5f, 0.5f, 0.5f);
+        unsigned int modelLoc = glGetUniformLocation(shader, "model");
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, (GLfloat *)tile);
 
-      glDrawArrays(GL_TRIANGLES, 0, 6);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, worldTex);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+      } else {
+        mat4x4_translate_in_place(tile, col * 0.5f, row * 0.5f, -12.75f);
+        mat4x4_scale_aniso(tile, tile, 0.5f, 0.5f, 0.5f);
+        unsigned int modelLoc = glGetUniformLocation(shader, "model");
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, (GLfloat *)tile);
+
+        updateCubeVBO(CubeVBO, &cube);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, texture);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+     }
     }
     glBindVertexArray(VAO);
     mat4x4 model;

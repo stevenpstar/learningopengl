@@ -77,5 +77,16 @@ void setTileData(int i, int tileSize, int texWidth, int texHeight, GLubyte *pixe
   glEnableVertexAttribArray(0);
   glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
   glEnableVertexAttribArray(2);
+}
 
+void getTileFromPosition(float x, float y, int *pos) {
+  float tileDim = 0.5f;
+  int tileX = floor(x / tileDim);
+  int tileY = floor(y / tileDim);
+  pos[0] = tileX;
+  pos[1] = tileY;
+}
+
+int getIndexFromTile(int x, int y, int mapWidth) {
+  return (y * mapWidth) + x;
 }

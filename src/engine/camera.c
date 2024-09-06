@@ -18,6 +18,7 @@ Camera createCamera(float *position, float *target, float speed) {
     .speed = speed,
     .yaw = -90.0f,
     .pitch = 0.0f,
+    .roll = 0.0f,
     .sensitivity = 0.01f,
     .lastX = 400.0,
     .lastY = 300.0,
@@ -44,11 +45,11 @@ void setDirection(Camera *camera) {
   vec3_norm(camera->direction, lookAhead);
 }
 
-void setProjection(unsigned int shader, const char* uniformName, Camera *camera, bool perspective) {
+void setProjection(unsigned int shader, const char* uniformName, Camera *camera, bool perspective, float w, float h) {
   mat4x4_identity(camera->proj);
   if (perspective) {
     printf("Setting persp!");
-    mat4x4_perspective(camera->proj, camera->fov, 800.0f / 600.0f, 0.1f, 100.0f);
+    mat4x4_perspective(camera->proj, camera->fov, (float)w / (float)h, 0.1f, 100.0f);
   } else {
     printf("Setting ortho!");
     mat4x4_ortho(camera->proj, 0.0f, 800.0f, 0.0f, 600.0f, 0.01f, 10000.0f);
@@ -64,12 +65,12 @@ void mouseLook(float xoff, float yoff, Camera *camera, float deltaTime) {
   camera->yaw += xoff;
   camera->pitch += yoff;
   //printf("yaw: %f\n", camera->yaw);
-  if (camera->pitch > 89.0f) {
-    camera->pitch = 89.0f;
-  } else if (camera->pitch < -89.0f) {
-    camera->pitch = -89.0f;
-  }
- // setDirection(camera);
+//  if (camera->pitch > 89.0f) {
+//    camera->pitch = 89.0f;
+//  } else if (camera->pitch < -89.0f) {
+//    camera->pitch = -89.0f;
+//  }
+  setDirection(camera);
 }
 
 void setFOV(float fov, Camera *camera) {

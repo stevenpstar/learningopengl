@@ -8,6 +8,15 @@ typedef struct P_CUBE {
   float vertices[180];
 } P_CUBE;
 
+// this is game specific but oh well
+// Cube without bottom and top
+typedef struct Wall {
+  float posX;
+  float posY;
+  float posZ;
+  float vertices[144];
+} Wall;
+
 typedef struct Animation {
   int state;
   int startFrame;
@@ -38,6 +47,8 @@ typedef struct P_CUBE_LIGHT {
 } P_CUBE_LIGHT;
 
 P_CUBE createCube(unsigned int VBO);
+void updateCubeVBO(unsigned int VBO, P_CUBE *cube);
+Wall createWall(unsigned int VBO);
 P_CUBE_LIGHT createCubeLight(unsigned int VBO, float x, float y, float z);
 Sprite createSprite(unsigned int VBO, const char *tex);
 Sprite createAnimatedSprite(unsigned int VBO, unsigned int EBO, float x, float y, float z, const char *tex, int frameWidth,
