@@ -1,4 +1,5 @@
 #include "../engine/primitives.h"
+#include "input.h"
 #include <stdbool.h>
 #ifndef H_PLAYER
 #define H_PLAYER
@@ -17,10 +18,12 @@ typedef struct Player {
   float y;
   float z;
   Sprite *sprite;
+  Animation anim;
   int state;
   int framerate;
   float frameTimer;
 } Player;
 
 void Animate(Player *player, Animation anim, bool loop, float deltaTime, unsigned int VBO);
+void processPlayerMovementNew(Player *player, Inputs *input, float deltaTime, int tiles[1024]);
 #endif

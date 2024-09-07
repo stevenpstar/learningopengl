@@ -11,6 +11,7 @@
 #include "engine/texture.h"
 #include "engine/camera.h"
 #include "engine/collision.h"
+#include "engine/lighting.h"
 // game files
 #include "game/Player.h"
 #include "game/tile.h"
@@ -128,49 +129,6 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
     rightDown = true;
   } else if (key == GLFW_KEY_D && action == GLFW_RELEASE) {
     rightDown = false;
-  }
-}
-
-void processCamMovement() {
-  vec3 camFront;
-  if (fpsMode) {
-    camFront[0] = 0.0f;
-    camFront[1] = 0.0f;
-    camFront[2] = -1.0f;
-  } else {
-    camFront[0] = 0.0f;
-    camFront[1] = -1.0f;
-    camFront[2] = 0.0f;
-  }
-  vec3 nFront;
-  vec3 pos = {activeCamera->position[0], 0.25f, activeCamera->position[2]};
-//  vec3 pos = {activeCamera->position[0], activeCamera->position[1], activeCamera->position[2]};
-  if (forwardDown) {
-    vec3_scale(nFront, activeCamera->direction, 0.025f);
-    vec3_add(activeCamera->position, pos, nFront);
-  }
-  if (backDown) {
-    vec3_scale(nFront, activeCamera->direction, -0.025f);
-    vec3_add(activeCamera->position, pos, nFront);
-  }
-  if (leftDown) {
-    vec3 cross;
-    vec3_mul_cross(cross, activeCamera->direction, up);
-    vec3_norm(cross, cross);
-    vec3_scale(cross, cross, -0.0125f);
-    vec3_add(activeCamera->position, activeCamera->position, cross);
-  }
-  if (rightDown) {
-    vec3 cross;
-    vec3_mul_cross(cross, activeCamera->direction, up);
-    vec3_norm(cross, cross);
-    vec3_scale(cross, cross, 0.0125f);
-    vec3_add(activeCamera->position, activeCamera->position, cross);
-  }
-  if (!forwardDown && !backDown && !leftDown && !rightDown) {
-    idle = true;
-  } else {
-    idle = false;
   }
 }
 
@@ -323,12 +281,11 @@ int main(void) {
   glGenBuffers(1, &lVBO);
   glGenBuffers(1, &EBO);
   glBindVertexArray(VAO);
-  vec3 pos = {0.0f, 0.0f, -10.0f};
-  vec3 fpsPos = {0.0f, 0.25f, 0.0f};
+  vec3 pos = {0.0f, 0.0f, -7.0f};
+  vec3 fpsPos = {0.0f, 0.5f, 0.0f};
   vec3 target = {0.0f, 0.0f, 0.0f};
   Camera cam = createCamera(pos, target, 2.5f);
   Camera FPScam = createCamera(fpsPos, target, 2.5f);
-//  FPScam.pitch = 90.0f;
   activeCamera = &cam;
   shader = createShader("./src/shaders/vertex.vert", 
       "./src/shaders/fragment.frag");
@@ -420,7 +377,8 @@ int main(void) {
       updateProjection = false;
     }
     if (fpsMode) {
-      processCamMovement();
+      processCameraMovement(activeCamera, &idle, forwardDown, 
+          backDown, leftDown, rightDown, fpsMode, up);
     }
     processPlayerMovement(deltaTime);
     glBindVertexArray(VAO);
@@ -433,49 +391,15 @@ int main(void) {
     glUniform3f(glGetUniformLocation(shader,"dirLight.diffuse"), 0.5f, 0.5f, 0.5f);
     glUniform3f(glGetUniformLocation(shader, "dirLight.specular"), 1.0f, 1.0f, 1.0f);
       // point lights
-    glUniform3f(glGetUniformLocation(shader, "pointLights[0].position"), 
-        lightCubes[0].posX, lightCubes[0].posY, lightCubes[0].posZ);
-    glUniform3f(glGetUniformLocation(shader, "pointLights[0].ambient"), 0.05f, 0.05f, 0.05f);
-    glUniform3f(glGetUniformLocation(shader, "pointLights[0].diffuse"), 0.8f, 0.8f, 0.8f);
-    glUniform3f(glGetUniformLocation(shader, "pointLights[0].specular"), 1.0f, 1.0f, 1.0f);
-    glUniform1f(glGetUniformLocation(shader, "pointLights[0].constant"), 1.0f);
-    glUniform1f(glGetUniformLocation(shader, "pointLights[0].linear"), 0.09f);
-    glUniform1f(glGetUniformLocation(shader, "pointLights[0].quadratic"), 0.032f);
-
-    glUniform3f(glGetUniformLocation(shader, "pointLights[1].position"), 
-        lightCubes[1].posX, lightCubes[1].posY, lightCubes[1].posZ);
-    glUniform3f(glGetUniformLocation(shader, "pointLights[1].ambient"), 0.05f, 0.05f, 0.05f);
-    glUniform3f(glGetUniformLocation(shader, "pointLights[1].diffuse"), 0.8f, 0.8f, 0.8f);
-    glUniform3f(glGetUniformLocation(shader, "pointLights[1].specular"), 1.0f, 1.0f, 1.0f);
-    glUniform1f(glGetUniformLocation(shader, "pointLights[1].constant"), 1.0f);
-    glUniform1f(glGetUniformLocation(shader, "pointLights[1].linear"), 0.09f);
-    glUniform1f(glGetUniformLocation(shader, "pointLights[1].quadratic"), 0.032f);
-
-    glUniform3f(glGetUniformLocation(shader, "pointLights[2].position"), 
-        lightCubes[2].posX, lightCubes[2].posY, lightCubes[2].posZ);
-    glUniform3f(glGetUniformLocation(shader, "pointLights[2].ambient"), 0.05f, 0.05f, 0.05f);
-    glUniform3f(glGetUniformLocation(shader, "pointLights[2].diffuse"), 0.8f, 0.0f, 0.0f);
-    glUniform3f(glGetUniformLocation(shader, "pointLights[2].specular"), 1.0f, 1.0f, 1.0f);
-    glUniform1f(glGetUniformLocation(shader, "pointLights[2].constant"), 1.0f);
-    glUniform1f(glGetUniformLocation(shader, "pointLights[2].linear"), 0.09f);
-    glUniform1f(glGetUniformLocation(shader, "pointLights[2].quadratic"), 0.032f);
-
-    glUniform3f(glGetUniformLocation(shader, "pointLights[3].position"), 
-        lightCubes[3].posX, lightCubes[3].posY, lightCubes[3].posZ);
-    glUniform3f(glGetUniformLocation(shader, "pointLights[3].ambient"), 0.05f, 0.05f, 0.05f);
-    glUniform3f(glGetUniformLocation(shader, "pointLights[3].diffuse"), 0.0f, 0.0f, 0.8f);
-    glUniform3f(glGetUniformLocation(shader, "pointLights[3].specular"), 1.0f, 1.0f, 1.0f);
-    glUniform1f(glGetUniformLocation(shader, "pointLights[3].constant"), 1.0f);
-    glUniform1f(glGetUniformLocation(shader, "pointLights[3].linear"), 0.09f);
-    glUniform1f(glGetUniformLocation(shader, "pointLights[3].quadratic"), 0.032f);
-
+    for (int i = 0; i < 4; i++) {
+      vec3 lPos = { lightCubes[i].posX, lightCubes[i].posY, lightCubes[i].posZ };
+      vec3 diff = { 0.8f, 0.8f, 0.8f };
+      setPointLight(i, lPos, diff, shader);
+    }
     // material properties
     glUniform3f(glGetUniformLocation(shader, "material.specular"), 0.5f, 0.5f, 0.5f);
     glUniform1f(glGetUniformLocation(shader, "material.shininess"), 64.0f);
 
-    glUniform1f(glGetUniformLocation(shader, "light.constant"), 1.0f);
-    glUniform1f(glGetUniformLocation(shader, "light.linear"), 0.09f);
-    glUniform1f(glGetUniformLocation(shader, "light.quadratic"), 0.032f);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, player.texture);
 
@@ -558,7 +482,7 @@ int main(void) {
         }
         // mega scuffed roof for walls
         mat4x4_identity(tile);
-        mat4x4_translate_in_place(tile, col * 0.5f, 0.75f, row * 0.5f);
+        mat4x4_translate_in_place(tile, col * 0.5f, 1.f, row * 0.5f);
         mat4x4_rotate(tile, tile, 1.0f, 0.0f, 0.0f, degToRad(90.0f));
         mat4x4_scale_aniso(tile, tile, 0.5f, 0.5f, 0.5f);
         unsigned int modelLoc = glGetUniformLocation(shader, "model");
@@ -575,6 +499,9 @@ int main(void) {
     mat4x4_identity(model);
     mat4x4_translate_in_place(model, playerObj.x, playerObj.y, playerObj.z);
     mat4x4_rotate(model, model, 1.0f, 0.0f, 0.0f, degToRad(-90.0f));
+    if (fpsMode) {
+      mat4x4_rotate(model, model, -1.0f, 0.0f, 0.0f, degToRad(-90.0f));
+    }
     unsigned int modelLoc = glGetUniformLocation(shader, "model");
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, (GLfloat *)model);
 

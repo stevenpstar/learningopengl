@@ -19,7 +19,7 @@ Camera createCamera(float *position, float *target, float speed) {
     .yaw = -90.0f,
     .pitch = 0.0f,
     .roll = 0.0f,
-    .sensitivity = 0.01f,
+    .sensitivity = 0.04f,
     .lastX = 400.0,
     .lastY = 300.0,
     .fov = 0.9f,
@@ -61,7 +61,7 @@ void setProjection(unsigned int shader, const char* uniformName, Camera *camera,
 
 void mouseLook(float xoff, float yoff, Camera *camera, float deltaTime) {
   xoff *= camera->sensitivity;// * deltaTime;
-  yoff *= camera->sensitivity;//* deltaTime;
+  yoff *= camera->sensitivity;// * deltaTime;
   camera->yaw += xoff;
   camera->pitch += yoff;
   //printf("yaw: %f\n", camera->yaw);
@@ -76,6 +76,50 @@ void mouseLook(float xoff, float yoff, Camera *camera, float deltaTime) {
 void setFOV(float fov, Camera *camera) {
   //camera->fov = fov;
   //mat4x4_perspective(camera->proj, camera->fov, 800.0f / 600.0f, 0.1f, 100.0f);
+}
+
+void processCameraMovement(Camera *camera, bool *idle, bool f, bool b, bool l, bool r, bool fpsMode, vec3 up) {
+  vec3 camFront;
+  if (fpsMode) {
+    camFront[0] = 0.0f;
+    camFront[1] = 0.0f;
+    camFront[2] = -1.0f;
+  } else {
+    camFront[0] = 0.0f;
+    camFront[1] = -1.0f;
+    camFront[2] = 0.0f;
+  }
+  vec3 nFront;
+  vec3 pos = {camera->position[0], 0.4f, camera->position[2]};
+//  vec3 pos = {camera->position[0], camera->position[1], camera->position[2]};
+  if (f) {
+    vec3_scale(nFront, camera->direction, 0.025f);
+    vec3_add(camera->position, pos, nFront);
+  }
+  if (b) {
+    vec3_scale(nFront, camera->direction, -0.025f);
+    vec3_add(camera->position, pos, nFront);
+  }
+  if (l) {
+    vec3 cross;
+    vec3_mul_cross(cross, camera->direction, up);
+    vec3_norm(cross, cross);
+    vec3_scale(cross, cross, -0.0125f);
+    vec3_add(camera->position, camera->position, cross);
+  }
+  if (r) {
+    vec3 cross;
+    vec3_mul_cross(cross, camera->direction, up);
+    vec3_norm(cross, cross);
+    vec3_scale(cross, cross, 0.0125f);
+    vec3_add(camera->position, camera->position, cross);
+  }
+  if (!f && !b && !l && !r) {
+    *idle = true;
+  } else {
+    *idle = false;
+  }
+
 }
 
 

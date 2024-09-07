@@ -9,6 +9,7 @@ gcc -Wall -Wextra -g -o ^
 ./src/engine/texture.c ^
 ./src/engine/camera.c ^
 ./src/engine/collision.c ^
+./src/engine/lighting.c ^
 ./src/game/Player.c ^
 ./src/game/tile.c ^
 -Idep -Ldep -lglfw3 -lgdi32 -lopengl32
