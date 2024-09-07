@@ -35,7 +35,7 @@ typedef struct Sprite {
   int frameCount;
   int currentFrame;
   float frameTime;
-  float data[30]; // Formatted: vert x, y, z, tex coords x, y
+  float data[48]; // Formatted: vert x, y, z, tex coords x, y
   int indices[6];
 } Sprite;
 

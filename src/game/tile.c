@@ -50,32 +50,34 @@ void setTileData(int i, int tileSize, int texWidth, int texHeight, GLubyte *pixe
   float left = 0.0 + normWidth * colNum;
   float right = 0.0 + (normWidth * colNum) + normWidth;
   // bottom left
-  data[3] = left;
-  data[4] = bottomY;
+  data[6] = left; // done
+  data[7] = bottomY;// done
   // duplicate vertex bottom l
-  data[28] = left;
-  data[29] = bottomY;
+  data[46] = left;
+  data[47] = bottomY;
 
   // bottom right
-  data[8] = right;
-  data[9] = bottomY;
+  data[14] = right; // done
+  data[15] = bottomY; // done
 
   // top right
-  data[13] = right;
-  data[14] = topY;
-  data[18] = right;
-  data[19] = topY;
+  data[22] = right; // done
+  data[23] = topY; // done
+  data[30] = right; // done
+  data[31] = topY; // done
 
   // top left
-  data[23] = left;
-  data[24] = topY;
+  data[38] = left; // done
+  data[39] = topY; // done
 
   glBindBuffer(GL_ARRAY_BUFFER, VBO);
-  glBufferData(GL_ARRAY_BUFFER, 32 * sizeof(float), data, GL_STATIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER, 48 * sizeof(float), data, GL_STATIC_DRAW);
 
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
   glEnableVertexAttribArray(0);
-  glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+  glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+  glEnableVertexAttribArray(1);
+  glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
   glEnableVertexAttribArray(2);
 }
 
@@ -85,32 +87,34 @@ void resetTileTexCoords(float *data, unsigned int VBO) {
   float left = 0.0;
   float right = 1.0;
   // bottom left
-  data[3] = left;
-  data[4] = bottomY;
+  data[6] = left; // done
+  data[7] = bottomY;// done
   // duplicate vertex bottom l
-  data[28] = left;
-  data[29] = bottomY;
+  data[46] = left;
+  data[47] = bottomY;
 
   // bottom right
-  data[8] = right;
-  data[9] = bottomY;
+  data[14] = right; // done
+  data[15] = bottomY; // done
 
   // top right
-  data[13] = right;
-  data[14] = topY;
-  data[18] = right;
-  data[19] = topY;
+  data[22] = right; // done
+  data[23] = topY; // done
+  data[30] = right; // done
+  data[31] = topY; // done
 
   // top left
-  data[23] = left;
-  data[24] = topY;
+  data[38] = left; // done
+  data[39] = topY; // done
 
   glBindBuffer(GL_ARRAY_BUFFER, VBO);
-  glBufferData(GL_ARRAY_BUFFER, 32 * sizeof(float), data, GL_STATIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER, 48 * sizeof(float), data, GL_STATIC_DRAW);
 
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
   glEnableVertexAttribArray(0);
-  glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+  glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+  glEnableVertexAttribArray(1);
+  glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
   glEnableVertexAttribArray(2);
 }
 

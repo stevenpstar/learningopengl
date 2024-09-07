@@ -15,7 +15,6 @@
 #include "game/Player.h"
 #include "game/tile.h"
 
-
 // globals
 double mouseX;
 double mouseY;
@@ -61,7 +60,7 @@ Bounds boundsB = {
 
 vec3 up = {0.0f, 1.0f, 0.0f};
 
-unsigned int VBO, CubeVBO, worldVBO, lVBO, VAO, EBO, lightingVAO, shader, lightingShader, texture;
+unsigned int VBO, CubeVBO, worldVBO, lVAO, lVBO, VAO, EBO, lightingVAO, shader, lightingShader, texture, bsq;
 int tiles[1024] = {0};
 
 void debug_PRINTMAT4(mat4x4 printme) {
@@ -78,6 +77,8 @@ void resizeWindow(GLFWwindow* window, int width, int height) {
   windowHeight = height;
   glUseProgram(shader);
   setProjection(shader, "proj", activeCamera, perspective, windowWidth, windowHeight);
+  glUseProgram(lightingShader);
+  setProjection(lightingShader, "proj", activeCamera, perspective, windowWidth, windowHeight);
 }
 
 void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods) {
@@ -143,6 +144,7 @@ void processCamMovement() {
   }
   vec3 nFront;
   vec3 pos = {activeCamera->position[0], 0.25f, activeCamera->position[2]};
+//  vec3 pos = {activeCamera->position[0], activeCamera->position[1], activeCamera->position[2]};
   if (forwardDown) {
     vec3_scale(nFront, activeCamera->direction, 0.025f);
     vec3_add(activeCamera->position, pos, nFront);
@@ -313,6 +315,7 @@ int main(void) {
   }
 
   glGenVertexArrays(1, &VAO);
+  glGenVertexArrays(1, &lVAO);
   glGenVertexArrays(1, &lightingVAO);
   glGenBuffers(1, &VBO);
   glGenBuffers(1, &CubeVBO);
@@ -329,7 +332,11 @@ int main(void) {
   activeCamera = &cam;
   shader = createShader("./src/shaders/vertex.vert", 
       "./src/shaders/fragment.frag");
-  texture = loadTextureRGB("res/wall.png");
+  lightingShader = createShader("./src/shaders/vertex.vert", 
+      "./src/shaders/lighting.frag");
+
+  texture = loadTextureRGB("res/wallhue.png");
+  bsq = loadTextureRGB("res/blacksq.png");
 
   Sprite player = createAnimatedSprite(VBO, EBO, 0.0f, 0.0f, -12.0f, "res/Prototype_Character.png",
       32, 32, 128, 384); 
@@ -355,7 +362,15 @@ int main(void) {
   unsigned int worldTex = createWorld(tiles, "res/floortiles.png", pixels);
   activePlayer = &playerObj;
   P_CUBE cube = createCube(CubeVBO);
-  P_CUBE_LIGHT lcube = createCubeLight(lVBO, 0.0f, 0.0f, 0.0f);
+  glBindVertexArray(lVAO);
+//  P_CUBE_LIGHT lcube = createCubeLight(lVBO, 0.0f, 0.5f, 1.0f);
+  P_CUBE_LIGHT lightCubes[4] = {
+    createCubeLight(lVBO, 0.0f, 0.5f, 1.0f),
+    createCubeLight(lVBO, 2.0f, 0.5f, 1.0f),
+    createCubeLight(lVBO, 9.0f, 0.5f, 9.0f),
+    createCubeLight(lVBO, 24.0f, 0.5f, 24.0f),
+  };
+  glBindVertexArray(lightingVAO);
   GLint bufsize = 0;
   float data[24];
   glGetBufferParameteriv(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_SIZE, &bufsize);
@@ -365,7 +380,7 @@ int main(void) {
     printf("bufsize: %f\n", data[i]);
   }
   glUseProgram(shader);
-  glUniform1i(glGetUniformLocation(shader, "tex1"), 0);
+  glUniform1i(glGetUniformLocation(shader, "material.diffuse"), 0);
 
   // load texture into shader
 
@@ -378,13 +393,13 @@ int main(void) {
   glfwSetCursorPosCallback(window, mouseMove);
   glfwSetKeyCallback(window, keyCallback);
   // Set projection before game loop
-  float planeData[30] = {
-    -0.5f, -0.5f, -0.0f,  0.0f, 1.0 - 0.083333f,//0.0f, // bottom left
-     0.5f, -0.5f, -0.0f,  0.25f, 1.0 - 0.083333f, // bottom right
-     0.5f,  0.5f, -0.0f,  0.25f, 1.f, // top right
-     0.5f,  0.5f, -0.0f,  0.25f, 1.f, // top right duplicate (ignore and/or change to be same not sure)
-    -0.5f,  0.5f, -0.0f,  0.0f, 1.0f, // top left
-    -0.5f, -0.5f, -0.0f,  0.0f, 1.0 - 0.083333f, // bottom left duplicate     
+  float planeData[48] = {
+    -0.5f, -0.5f, -0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0 - 0.083333f,//0.0f, // bottom left
+     0.5f, -0.5f, -0.0f, 0.0f, 1.0f, 0.0f, 0.25f, 1.0 - 0.083333f, // bottom right
+     0.5f,  0.5f, -0.0f, 0.0f, 1.0f, 0.0f, 0.25f, 1.f, // top right
+     0.5f,  0.5f, -0.0f, 0.0f, 1.0f, 0.0f, 0.25f, 1.f, // top right duplicate (ignore and/or change to be same not sure)
+    -0.5f,  0.5f, -0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, // top left
+    -0.5f, -0.5f, -0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0 - 0.083333f, // bottom left duplicate     
   };
 
   while (!glfwWindowShouldClose(window)) {
@@ -400,6 +415,8 @@ int main(void) {
     if (updateProjection) {
       glUseProgram(shader);
       setProjection(shader, "proj", activeCamera, perspective, windowWidth, windowHeight);
+      glUseProgram(lightingShader);
+      setProjection(lightingShader, "proj", activeCamera, perspective, windowWidth, windowHeight);
       updateProjection = false;
     }
     if (fpsMode) {
@@ -407,10 +424,61 @@ int main(void) {
     }
     processPlayerMovement(deltaTime);
     glBindVertexArray(VAO);
+    glUseProgram(shader);
+//    glUniform3f(glGetUniformLocation(shader, "light.position"), lcube.posX, lcube.posY, lcube.posZ);
+    glUniform3fv(glGetUniformLocation(shader, "viewPos"), 1, activeCamera->position);
+        // dirLight properties
+    glUniform3f(glGetUniformLocation(shader, "dirLight.direction"), -0.2f, -1.0f, -0.3f); 
+    glUniform3f(glGetUniformLocation(shader, "dirLight.ambient"), 0.2f, 0.2f, 0.2f); 
+    glUniform3f(glGetUniformLocation(shader,"dirLight.diffuse"), 0.5f, 0.5f, 0.5f);
+    glUniform3f(glGetUniformLocation(shader, "dirLight.specular"), 1.0f, 1.0f, 1.0f);
+      // point lights
+    glUniform3f(glGetUniformLocation(shader, "pointLights[0].position"), 
+        lightCubes[0].posX, lightCubes[0].posY, lightCubes[0].posZ);
+    glUniform3f(glGetUniformLocation(shader, "pointLights[0].ambient"), 0.05f, 0.05f, 0.05f);
+    glUniform3f(glGetUniformLocation(shader, "pointLights[0].diffuse"), 0.8f, 0.8f, 0.8f);
+    glUniform3f(glGetUniformLocation(shader, "pointLights[0].specular"), 1.0f, 1.0f, 1.0f);
+    glUniform1f(glGetUniformLocation(shader, "pointLights[0].constant"), 1.0f);
+    glUniform1f(glGetUniformLocation(shader, "pointLights[0].linear"), 0.09f);
+    glUniform1f(glGetUniformLocation(shader, "pointLights[0].quadratic"), 0.032f);
+
+    glUniform3f(glGetUniformLocation(shader, "pointLights[1].position"), 
+        lightCubes[1].posX, lightCubes[1].posY, lightCubes[1].posZ);
+    glUniform3f(glGetUniformLocation(shader, "pointLights[1].ambient"), 0.05f, 0.05f, 0.05f);
+    glUniform3f(glGetUniformLocation(shader, "pointLights[1].diffuse"), 0.8f, 0.8f, 0.8f);
+    glUniform3f(glGetUniformLocation(shader, "pointLights[1].specular"), 1.0f, 1.0f, 1.0f);
+    glUniform1f(glGetUniformLocation(shader, "pointLights[1].constant"), 1.0f);
+    glUniform1f(glGetUniformLocation(shader, "pointLights[1].linear"), 0.09f);
+    glUniform1f(glGetUniformLocation(shader, "pointLights[1].quadratic"), 0.032f);
+
+    glUniform3f(glGetUniformLocation(shader, "pointLights[2].position"), 
+        lightCubes[2].posX, lightCubes[2].posY, lightCubes[2].posZ);
+    glUniform3f(glGetUniformLocation(shader, "pointLights[2].ambient"), 0.05f, 0.05f, 0.05f);
+    glUniform3f(glGetUniformLocation(shader, "pointLights[2].diffuse"), 0.8f, 0.0f, 0.0f);
+    glUniform3f(glGetUniformLocation(shader, "pointLights[2].specular"), 1.0f, 1.0f, 1.0f);
+    glUniform1f(glGetUniformLocation(shader, "pointLights[2].constant"), 1.0f);
+    glUniform1f(glGetUniformLocation(shader, "pointLights[2].linear"), 0.09f);
+    glUniform1f(glGetUniformLocation(shader, "pointLights[2].quadratic"), 0.032f);
+
+    glUniform3f(glGetUniformLocation(shader, "pointLights[3].position"), 
+        lightCubes[3].posX, lightCubes[3].posY, lightCubes[3].posZ);
+    glUniform3f(glGetUniformLocation(shader, "pointLights[3].ambient"), 0.05f, 0.05f, 0.05f);
+    glUniform3f(glGetUniformLocation(shader, "pointLights[3].diffuse"), 0.0f, 0.0f, 0.8f);
+    glUniform3f(glGetUniformLocation(shader, "pointLights[3].specular"), 1.0f, 1.0f, 1.0f);
+    glUniform1f(glGetUniformLocation(shader, "pointLights[3].constant"), 1.0f);
+    glUniform1f(glGetUniformLocation(shader, "pointLights[3].linear"), 0.09f);
+    glUniform1f(glGetUniformLocation(shader, "pointLights[3].quadratic"), 0.032f);
+
+    // material properties
+    glUniform3f(glGetUniformLocation(shader, "material.specular"), 0.5f, 0.5f, 0.5f);
+    glUniform1f(glGetUniformLocation(shader, "material.shininess"), 64.0f);
+
+    glUniform1f(glGetUniformLocation(shader, "light.constant"), 1.0f);
+    glUniform1f(glGetUniformLocation(shader, "light.linear"), 0.09f);
+    glUniform1f(glGetUniformLocation(shader, "light.quadratic"), 0.032f);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, player.texture);
 
-    Animate(&playerObj, playerAnim, true, deltaTime, VBO);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -431,9 +499,8 @@ int main(void) {
 
     unsigned int viewLoc = glGetUniformLocation(shader, "view");
     glUniformMatrix4fv(viewLoc, 1, GL_FALSE, (GLfloat *)view);
-    glUseProgram(shader);
     glBindVertexArray(lightingVAO);
-    glBindBuffer(GL_VERTEX_ARRAY, worldVBO);
+    glBindBuffer(GL_VERTEX_ARRAY, VBO);
     for (int i=0;i<1024;i++) {
       int row = floor((float)i / 32);
       int col = i - (32 * row);
@@ -447,6 +514,7 @@ int main(void) {
         mat4x4_scale_aniso(tile, tile, 0.5f, 0.5f, 0.5f);
         unsigned int modelLoc = glGetUniformLocation(shader, "model");
         glUniformMatrix4fv(modelLoc, 1, GL_FALSE, (GLfloat *)tile);
+//        glUniform1i(glGetUniformLocation(shader, "material.diffuse"), 0);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, worldTex);
         glDrawArrays(GL_TRIANGLES, 0, 6);
@@ -476,11 +544,33 @@ int main(void) {
   //        updateCubeVBO(CubeVBO, &cube);
           glActiveTexture(GL_TEXTURE0);
           glBindTexture(GL_TEXTURE_2D, texture);
+          glBindVertexArray(lightingVAO);
           glDrawArrays(GL_TRIANGLES, 0, 6);
+
+          // scuffed double height walls?
+          mat4x4_translate_in_place(tile, 0.0f, 1.f, 0.0f);
+          glUniformMatrix4fv(modelLoc, 1, GL_FALSE, (GLfloat *)tile);
+          glActiveTexture(GL_TEXTURE0);
+          glBindTexture(GL_TEXTURE_2D, texture);
+          glBindVertexArray(lightingVAO);
+          glDrawArrays(GL_TRIANGLES, 0, 6);
+
         }
+        // mega scuffed roof for walls
+        mat4x4_identity(tile);
+        mat4x4_translate_in_place(tile, col * 0.5f, 0.75f, row * 0.5f);
+        mat4x4_rotate(tile, tile, 1.0f, 0.0f, 0.0f, degToRad(90.0f));
+        mat4x4_scale_aniso(tile, tile, 0.5f, 0.5f, 0.5f);
+        unsigned int modelLoc = glGetUniformLocation(shader, "model");
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, (GLfloat *)tile);
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, bsq);
+        glBindVertexArray(lightingVAO);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+
      }
     }
-    glBindVertexArray(VAO);
     mat4x4 model;
     mat4x4_identity(model);
     mat4x4_translate_in_place(model, playerObj.x, playerObj.y, playerObj.z);
@@ -490,21 +580,35 @@ int main(void) {
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, player.texture);
+   // Rendering Player Sprite
+    glBindVertexArray(VAO);
 
-   // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-   // Rendering Player
+    Animate(&playerObj, playerAnim, true, deltaTime, VBO);
     glDrawArrays(GL_TRIANGLES, 0, 6);
-  //  glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
-    //rendering light source cubes
-   // setCubeLight(lVBO, lcube.vertices);
-  //  glDrawArrays(GL_TRIANGLES, 0, 36);
+    glBindVertexArray(lVAO);
+    glUseProgram(lightingShader);
+    for (int i=0;i<4;i++) {
+      mat4x4 light;
+      mat4x4_identity(light);
+      mat4x4_translate_in_place(light, lightCubes[i].posX, lightCubes[i].posY, lightCubes[i].posZ);
+      mat4x4_scale_aniso(light, light, 0.2f, 0.2f, 0.2f);
+      unsigned int lightLoc = glGetUniformLocation(lightingShader, "model");
+      glUniformMatrix4fv(lightLoc, 1, GL_FALSE, (GLfloat *)light);
+      unsigned int lightviewLoc = glGetUniformLocation(lightingShader, "view");
+      glUniformMatrix4fv(lightviewLoc, 1, GL_FALSE, (GLfloat *)view);
+
+      setCubeLight(lVBO, lightCubes[i].vertices);
+
+      glDrawArrays(GL_TRIANGLES, 0, 36);
+    }
 
     glfwSwapBuffers(window);
     glfwPollEvents();
   }
   glDeleteVertexArrays(1, &VAO);
   glDeleteBuffers(1, &VBO);
+  glDeleteBuffers(1, &lVBO);
   glDeleteBuffers(1, &worldVBO);
   glDeleteBuffers(1, &EBO);
   glfwTerminate();

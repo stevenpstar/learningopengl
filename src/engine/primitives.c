@@ -102,18 +102,62 @@ P_CUBE_LIGHT createCubeLight(unsigned int VBO, float x, float y, float z) {
   glBufferData(GL_ARRAY_BUFFER, sizeof(light.vertices), light.vertices, GL_STATIC_DRAW);
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
   glEnableVertexAttribArray(0);
-  int32_t bsize = 0;
-  glGetBufferParameteriv(GL_ARRAY_BUFFER, GL_BUFFER_SIZE, &bsize);
-  if (bsize == 0) {
-    printf("Nothing in light cube array buffer\n");
-  }
+//  int32_t bsize = 0;
+//  glGetBufferParameteriv(GL_ARRAY_BUFFER, GL_BUFFER_SIZE, &bsize);
+//  if (bsize == 0) {
+//    printf("Nothing in light cube array buffer\n");
+//  }
 
   return light;
 }
 
 void setCubeLight(unsigned int VBO, float *vertices) {
+    float verts[] = {
+        -0.5f, -0.5f, -0.5f, 
+         0.5f, -0.5f, -0.5f,  
+         0.5f,  0.5f, -0.5f,  
+         0.5f,  0.5f, -0.5f,  
+        -0.5f,  0.5f, -0.5f, 
+        -0.5f, -0.5f, -0.5f, 
+
+        -0.5f, -0.5f,  0.5f, 
+         0.5f, -0.5f,  0.5f,  
+         0.5f,  0.5f,  0.5f,  
+         0.5f,  0.5f,  0.5f,  
+        -0.5f,  0.5f,  0.5f, 
+        -0.5f, -0.5f,  0.5f, 
+
+        -0.5f,  0.5f,  0.5f, 
+        -0.5f,  0.5f, -0.5f, 
+        -0.5f, -0.5f, -0.5f, 
+        -0.5f, -0.5f, -0.5f, 
+        -0.5f, -0.5f,  0.5f, 
+        -0.5f,  0.5f,  0.5f, 
+
+         0.5f,  0.5f,  0.5f,  
+         0.5f,  0.5f, -0.5f,  
+         0.5f, -0.5f, -0.5f,  
+         0.5f, -0.5f, -0.5f,  
+         0.5f, -0.5f,  0.5f,  
+         0.5f,  0.5f,  0.5f,  
+
+        -0.5f, -0.5f, -0.5f, 
+         0.5f, -0.5f, -0.5f,  
+         0.5f, -0.5f,  0.5f,  
+         0.5f, -0.5f,  0.5f,  
+        -0.5f, -0.5f,  0.5f, 
+        -0.5f, -0.5f, -0.5f, 
+
+        -0.5f,  0.5f, -0.5f, 
+         0.5f,  0.5f, -0.5f,  
+         0.5f,  0.5f,  0.5f,  
+         0.5f,  0.5f,  0.5f,  
+        -0.5f,  0.5f,  0.5f, 
+        -0.5f,  0.5f, -0.5f,
+    };
+
   glBindBuffer(GL_ARRAY_BUFFER, VBO);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_STATIC_DRAW);
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
   glEnableVertexAttribArray(0);
   int32_t bsize = 0;
@@ -136,12 +180,12 @@ Sprite createAnimatedSprite(unsigned int VBO, unsigned int EBO,
       .posY = y,
       .posZ = z,
       .data = {
-        -0.5f, -0.5f, -0.0f,  0.0f, 1.0 - 0.083333f,//0.0f, // bottom left
-         0.5f, -0.5f, -0.0f,  0.25f, 1.0 - 0.083333f, // bottom right
-         0.5f,  0.5f, -0.0f,  0.25f, 1.f, // top right
-         0.5f,  0.5f, -0.0f,  0.25f, 1.f, // top right duplicate (ignore and/or change to be same not sure)
-        -0.5f,  0.5f, -0.0f,  0.0f, 1.0f, // top left
-        -0.5f, -0.5f, -0.0f,  0.0f, 1.0 - 0.083333f, // bottom left duplicate     
+        -0.5f, -0.5f, -0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0 - 0.083333f,//0.0f, // bottom left
+         0.5f, -0.5f, -0.0f, 0.0f, 1.0f, 0.0f, 0.25f, 1.0 - 0.083333f, // bottom right
+         0.5f,  0.5f, -0.0f, 0.0f, 1.0f, 0.0f, 0.25f, 1.f, // top right
+         0.5f,  0.5f, -0.0f, 0.0f, 1.0f, 0.0f, 0.25f, 1.f, // top right duplicate (ignore and/or change to be same not sure)
+        -0.5f,  0.5f, -0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, // top left
+        -0.5f, -0.5f, -0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0 - 0.083333f, // bottom left duplicate     
       },
       .indices = {
         0, 1, 3,
@@ -186,41 +230,41 @@ void SetFrame(Sprite *sprite, int frame, unsigned int VBO, bool flipHorizontal) 
     right = temp;
   }
   // bottom left
-  sprite->data[3] = left;
-  sprite->data[4] = bottomY;
-  // duplicate vertex bottom l
-  sprite->data[28] = left;
-  sprite->data[29] = bottomY;
+   sprite->data[6] = left; // done
+   sprite->data[7] = bottomY;// done
+   sprite->data[46] = left;
+   sprite->data[47] = bottomY;
 
-  // bottom right
-  sprite->data[8] = right;
-  sprite->data[9] = bottomY;
+   sprite->data[14] = right; // done
+   sprite->data[15] = bottomY; // done
 
-  // top right
-  sprite->data[13] = right;
-  sprite->data[14] = topY;
-  sprite->data[18] = right;
-  sprite->data[19] = topY;
+   sprite->data[22] = right; // done
+   sprite->data[23] = topY; // done
+   sprite->data[30] = right; // done
+   sprite->data[31] = topY; // done
 
-  // top left
-  sprite->data[23] = left;
-  sprite->data[24] = topY;
+   sprite->data[38] = left; // done
+   sprite->data[39] = topY; // done
 
   glBindBuffer(GL_ARRAY_BUFFER, VBO);
-  glBufferData(GL_ARRAY_BUFFER, 32 * sizeof(float), sprite->data, GL_STATIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(sprite->data), sprite->data, GL_STATIC_DRAW);
 
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
   glEnableVertexAttribArray(0);
-  glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+  glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+  glEnableVertexAttribArray(1);
+  glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
   glEnableVertexAttribArray(2);
 }
 
 void updateCubeVBO(unsigned int VBO, P_CUBE *cube) {
   glBindBuffer(GL_ARRAY_BUFFER, VBO);
   glBufferData(GL_ARRAY_BUFFER, sizeof(cube->vertices), cube->vertices, GL_STATIC_DRAW);
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
   glEnableVertexAttribArray(0);
-  glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+  glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+  glEnableVertexAttribArray(1);
+  glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
   glEnableVertexAttribArray(2);
 }
 
