@@ -46,20 +46,6 @@ bool rightDown = false;
 bool leftDown = false;
 float tc = 0.0f;
 
-Bounds boundsA = {
-  .x = 0.0f,
-  .y = 0.0f,
-  .width = 0.0f,
-  .height = 0.0f
-};
-
-Bounds boundsB = {
-  .x = 0.0f,
-  .y = 0.0f,
-  .width = 0.0f,
-  .height = 0.0f
-};
-
 vec3 up = {0.0f, 1.0f, 0.0f};
 
 unsigned int VBO, CubeVBO, worldVBO, lVAO, lVBO, VAO, EBO, lightingVAO, shader, lightingShader, texture, bsq;
@@ -190,7 +176,6 @@ int main(void) {
     .frameTimer = 0.0f,
   };
   setDefaults(&inputs);
-  glBindVertexArray(lightingVAO);
 
   unsigned int leveltex = loadTextureRGB("res/testlevelp.png");
   glActiveTexture(GL_TEXTURE0);
@@ -201,24 +186,15 @@ int main(void) {
 
   unsigned int worldTex = createWorld(tiles, "res/floortiles.png", pixels);
   activePlayer = &playerObj;
-  P_CUBE cube = createCube(CubeVBO);
+
   glBindVertexArray(lVAO);
-//  P_CUBE_LIGHT lcube = createCubeLight(lVBO, 0.0f, 0.5f, 1.0f);
+
   P_CUBE_LIGHT lightCubes[4] = {
     createCubeLight(lVBO, 0.0f, 0.5f, 1.0f),
     createCubeLight(lVBO, 2.0f, 0.5f, 1.0f),
     createCubeLight(lVBO, 9.0f, 0.5f, 9.0f),
     createCubeLight(lVBO, 24.0f, 0.5f, 24.0f),
   };
-  glBindVertexArray(lightingVAO);
-  GLint bufsize = 0;
-  float data[24];
-  glGetBufferParameteriv(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_SIZE, &bufsize);
-  printf("bufsize: %d\n", bufsize);
-  glGetBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, bufsize, data);
-  for (int i=0;i<24;i++) {
-    printf("bufsize: %f\n", data[i]);
-  }
   glUseProgram(shader);
   glUniform1i(glGetUniformLocation(shader, "material.diffuse"), 0);
 
