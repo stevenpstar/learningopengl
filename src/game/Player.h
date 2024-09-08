@@ -18,7 +18,7 @@ typedef struct Player {
   float y;
   float z;
   Sprite *sprite;
-  Animation anim;
+  Animation *anim;
   int state;
   int framerate;
   float frameTimer;

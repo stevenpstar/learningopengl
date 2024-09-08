@@ -78,7 +78,7 @@ void setFOV(float fov, Camera *camera) {
   //mat4x4_perspective(camera->proj, camera->fov, 800.0f / 600.0f, 0.1f, 100.0f);
 }
 
-void processCameraMovement(Camera *camera, bool *idle, bool f, bool b, bool l, bool r, bool fpsMode, vec3 up) {
+void processCameraMovement(Camera *camera, bool *idle, Inputs *inputs, bool fpsMode, vec3 up) {
   vec3 camFront;
   if (fpsMode) {
     camFront[0] = 0.0f;
@@ -92,29 +92,29 @@ void processCameraMovement(Camera *camera, bool *idle, bool f, bool b, bool l, b
   vec3 nFront;
   vec3 pos = {camera->position[0], 0.4f, camera->position[2]};
 //  vec3 pos = {camera->position[0], camera->position[1], camera->position[2]};
-  if (f) {
+  if (inputs->forward.Down) {
     vec3_scale(nFront, camera->direction, 0.025f);
     vec3_add(camera->position, pos, nFront);
   }
-  if (b) {
+  if (inputs->backwards.Down) {
     vec3_scale(nFront, camera->direction, -0.025f);
     vec3_add(camera->position, pos, nFront);
   }
-  if (l) {
+  if (inputs->left.Down) {
     vec3 cross;
     vec3_mul_cross(cross, camera->direction, up);
     vec3_norm(cross, cross);
     vec3_scale(cross, cross, -0.0125f);
     vec3_add(camera->position, camera->position, cross);
   }
-  if (r) {
+  if (inputs->right.Down) {
     vec3 cross;
     vec3_mul_cross(cross, camera->direction, up);
     vec3_norm(cross, cross);
     vec3_scale(cross, cross, 0.0125f);
     vec3_add(camera->position, camera->position, cross);
   }
-  if (!f && !b && !l && !r) {
+  if (!inputs->forward.Down && !inputs->backwards.Down && !inputs->left.Down && !inputs->right.Down) {
     *idle = true;
   } else {
     *idle = false;

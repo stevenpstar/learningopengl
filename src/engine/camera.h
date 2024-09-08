@@ -1,4 +1,5 @@
 #include "../../dep/linmath.h"
+#include "../game/input.h"
 #include <stdbool.h>
 #ifndef H_CAMERA
 #define H_CAMERA
@@ -22,5 +23,5 @@ void mouseLook(float xoff, float yoff, Camera *camera, float deltaTime);
 void setDirection(Camera *camera);
 void setProjection(unsigned int shader, const char* uniformName, Camera *camera, bool perspective, float w, float h);
 void setFOV(float fov, Camera *camera);
-void processCameraMovement(Camera *camera, bool *idle, bool f, bool b, bool l, bool r, bool fpsMode, vec3 up);
+void processCameraMovement(Camera *camera, bool *idle, Inputs *inputs, bool fpsMode, vec3 up);
 #endif

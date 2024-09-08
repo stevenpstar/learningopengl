@@ -31,5 +31,12 @@ void setPointLight(int index, vec3 position, vec3 diffuse, unsigned int shader) 
   glUniform1f(glGetUniformLocation(shader, constant), 1.0f);
   glUniform1f(glGetUniformLocation(shader, linear), 0.09f);
   glUniform1f(glGetUniformLocation(shader, quadratic), 0.032f);
+}
 
+void setDirectionalLight(vec3 direction, vec3 diffuse, vec3 ambient, unsigned int shader) {
+  glUseProgram(shader);
+  glUniform3f(glGetUniformLocation(shader, "dirLight.direction"), direction[0], direction[1], direction[2]); 
+  glUniform3f(glGetUniformLocation(shader, "dirLight.ambient"), ambient[0], ambient[1], ambient[2]); 
+  glUniform3f(glGetUniformLocation(shader,"dirLight.diffuse"), diffuse[0], diffuse[1], diffuse[2]);
+  glUniform3f(glGetUniformLocation(shader, "dirLight.specular"), 1.0f, 1.0f, 1.0f);
 }

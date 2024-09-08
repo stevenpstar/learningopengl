@@ -12,4 +12,5 @@ gcc -Wall -Wextra -g -o ^
 ./src/engine/lighting.c ^
 ./src/game/Player.c ^
 ./src/game/tile.c ^
+./src/game/input.c ^
 -Idep -Ldep -lglfw3 -lgdi32 -lopengl32

@@ -15,6 +15,7 @@
 // game files
 #include "game/Player.h"
 #include "game/tile.h"
+#include "game/input.h"
 
 // globals
 double mouseX;
@@ -62,6 +63,7 @@ Bounds boundsB = {
 vec3 up = {0.0f, 1.0f, 0.0f};
 
 unsigned int VBO, CubeVBO, worldVBO, lVAO, lVBO, VAO, EBO, lightingVAO, shader, lightingShader, texture, bsq;
+Inputs inputs;
 int tiles[1024] = {0};
 
 void debug_PRINTMAT4(mat4x4 printme) {
@@ -86,150 +88,28 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
   if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
     glfwSetWindowShouldClose(window, true);
   }
-  // TESTING THE CHANGE OF FOV
-  if (key == GLFW_KEY_F && action == GLFW_PRESS) {
-//    setFOV(activeCamera->fov + 0.1f, activeCamera);
-//    if (!updateProjection) {
-//      updateProjection = true;
-//      perspective = !perspective;
-//      printf("Persp %d\n", perspective);
-//    }
-    GLint polygonMode[2];
-    glad_glGetIntegerv(GL_POLYGON_MODE, polygonMode);
-    if (polygonMode[0] == GL_LINE)
-      glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    else 
-      glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
-  }
-  if (key == GLFW_KEY_N && action == GLFW_PRESS) {
-    playerSprite->currentFrame++;
-    SetFrame(playerSprite, playerSprite->currentFrame, VBO, false);
-    printf("playerSprite currentFrame %d\n", playerSprite->currentFrame);
-  }
   if (key == GLFW_KEY_TAB && action == GLFW_PRESS) {
     fpsMode = !fpsMode;
   }
   if (key == GLFW_KEY_W && action == GLFW_PRESS) {
-    forwardDown = true;
+    inputs.forward.Down = true;
   } else if (key == GLFW_KEY_W && action == GLFW_RELEASE) {
-    forwardDown = false;
+    inputs.forward.Down = false;
   }
   if (key == GLFW_KEY_S && action == GLFW_PRESS) {
-    backDown = true;
+    inputs.backwards.Down = true;
   } else if (key == GLFW_KEY_S && action == GLFW_RELEASE) {
-    backDown = false;
+    inputs.backwards.Down = false;
   }
   if (key == GLFW_KEY_A && action == GLFW_PRESS) {
-    leftDown = true;
+    inputs.left.Down = true;
   } else if (key == GLFW_KEY_A && action == GLFW_RELEASE) {
-    leftDown = false;
+    inputs.left.Down = false;
   }
   if (key == GLFW_KEY_D && action == GLFW_PRESS) {
-    rightDown = true;
+    inputs.right.Down = true;
   } else if (key == GLFW_KEY_D && action == GLFW_RELEASE) {
-    rightDown = false;
-  }
-}
-
-void processPlayerMovement(float deltaTime) {
-  if (fpsMode) { return; }
-  float playerSpeed = 2.f;
-  float diagonalMod = 0.70710678118;
-
-  int mVert = 0;
-  int mHoriz = 0;
-
-  if (forwardDown && rightDown || forwardDown && leftDown ||
-      backDown && rightDown || backDown && leftDown) {
-    playerSpeed *= diagonalMod;
-  }
-  if (forwardDown) {
-    if (playerAnim.state != RUN_UP) {
-      playerAnim.state = RUN_UP;
-      playerAnim.startFrame = 20;
-      playerAnim.endFrame = 23;
-    }
-    mVert = -1;
-  //  activePlayer->y += playerSpeed * deltaTime;
-  //  activeCamera->position[1] = activePlayer->y;
-  }
-  if (backDown) {
-    if (playerAnim.state != RUN_DOWN) {
-      playerAnim.state = RUN_DOWN;
-      playerAnim.startFrame = 12;
-      playerAnim.endFrame = 15;
-    }
-    mVert = 1;
-//    activePlayer->y -= playerSpeed * deltaTime;
-//    activeCamera->position[1] = activePlayer->y;
-  }
-  if (leftDown) {
-    if (playerAnim.state != RUN_LEFT) {
-      playerAnim.state = RUN_LEFT;
-      playerAnim.startFrame = 16;
-      playerAnim.endFrame = 19;
-    }
-    mHoriz = -1;
-//    activePlayer->x -= playerSpeed * deltaTime;
-//    activeCamera->position[0] = activePlayer->x;
-  }
-  if (rightDown) {
-  if (playerAnim.state != RUN_RIGHT) {
-      playerAnim.state = RUN_RIGHT;
-      playerAnim.startFrame = 16;
-      playerAnim.endFrame = 19;
-    }
-    mHoriz = 1;
-//    activePlayer->x += playerSpeed * deltaTime;
-//    activeCamera->position[0] = activePlayer->x;
-  }
-  if (!forwardDown && !backDown && !leftDown && !rightDown) {
-    if (playerAnim.state == RUN_UP) {
-      playerAnim.state = IDLE_UP;
-      playerAnim.startFrame = 8;
-      playerAnim.endFrame = 9;
-    }
-    else if (playerAnim.state == RUN_RIGHT) {
-      playerAnim.state = IDLE_RIGHT;
-      playerAnim.startFrame = 4;
-      playerAnim.endFrame = 5;
-    }
-    else if (playerAnim.state == RUN_LEFT) {
-      playerAnim.state = IDLE_LEFT;
-      playerAnim.startFrame = 4;
-      playerAnim.endFrame = 5;
-    }
-    else if (playerAnim.state == RUN_DOWN) {
-      playerAnim.state = IDLE_DOWN;
-      playerAnim.startFrame = 0;
-      playerAnim.endFrame = 1;
-    }
-  }
-  vec2 nextPosition = {0};
-  nextPosition[0] = activePlayer->x + mHoriz * playerSpeed * deltaTime;
-  nextPosition[1] = activePlayer->y + mVert * playerSpeed * deltaTime;
-  boundsA.width = 0.5f;
-  boundsA.height = 0.5f;
-  boundsA.x = nextPosition[0];
-  boundsA.y = nextPosition[1];
-  int nextTile[2] = {0};
-  getTileFromPosition(nextPosition[0], nextPosition[1], nextTile);
-  int tileIndex = getIndexFromTile(nextTile[0], nextTile[1], 32);
-  bool checkCollide = tiles[tileIndex] == 34;
-
-  boundsB.width = 0.5f;
-  boundsB.height = 0.5f;
-  boundsB.x = nextTile[0] * 0.5f;
-  boundsB.y = nextTile[1] * 0.5f;
-
-  if (!IsColliding(&boundsA, &boundsB) || !checkCollide) {
-    activePlayer->x += mHoriz * playerSpeed * deltaTime;
-    activePlayer->z += mVert * playerSpeed * deltaTime;
-    if (!fpsMode) {
-      activeCamera->position[0] = -activePlayer->x;
-      activeCamera->position[1] = activePlayer->z;
-    }
+    inputs.right.Down = false;
   }
 }
 
@@ -286,6 +166,7 @@ int main(void) {
   vec3 target = {0.0f, 0.0f, 0.0f};
   Camera cam = createCamera(pos, target, 2.5f);
   Camera FPScam = createCamera(fpsPos, target, 2.5f);
+  FPScam.fov = 1.3f;
   activeCamera = &cam;
   shader = createShader("./src/shaders/vertex.vert", 
       "./src/shaders/fragment.frag");
@@ -303,10 +184,12 @@ int main(void) {
     .y = 0.25f,
     .z = 0.0f,
     .sprite = &player,
+    .anim = &playerAnim,
     .state = 0,
     .framerate = 8,
     .frameTimer = 0.0f,
   };
+  setDefaults(&inputs);
   glBindVertexArray(lightingVAO);
 
   unsigned int leveltex = loadTextureRGB("res/testlevelp.png");
@@ -339,17 +222,15 @@ int main(void) {
   glUseProgram(shader);
   glUniform1i(glGetUniformLocation(shader, "material.diffuse"), 0);
 
-  // load texture into shader
-
   glEnable(GL_DEPTH_TEST);
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   glViewport(0, 0, 800, 600);
+
   glfwSetFramebufferSizeCallback(window, resizeWindow);
   glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
   glfwSetCursorPosCallback(window, mouseMove);
   glfwSetKeyCallback(window, keyCallback);
-  // Set projection before game loop
   float planeData[48] = {
     -0.5f, -0.5f, -0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0 - 0.083333f,//0.0f, // bottom left
      0.5f, -0.5f, -0.0f, 0.0f, 1.0f, 0.0f, 0.25f, 1.0 - 0.083333f, // bottom right
@@ -377,20 +258,19 @@ int main(void) {
       updateProjection = false;
     }
     if (fpsMode) {
-      processCameraMovement(activeCamera, &idle, forwardDown, 
-          backDown, leftDown, rightDown, fpsMode, up);
+      processCameraMovement(activeCamera, &idle, &inputs, fpsMode, up);
     }
-    processPlayerMovement(deltaTime);
+    if (!fpsMode) {
+      processPlayerMovementNew(activePlayer, &inputs, deltaTime, tiles);
+    }
     glBindVertexArray(VAO);
     glUseProgram(shader);
-//    glUniform3f(glGetUniformLocation(shader, "light.position"), lcube.posX, lcube.posY, lcube.posZ);
     glUniform3fv(glGetUniformLocation(shader, "viewPos"), 1, activeCamera->position);
-        // dirLight properties
-    glUniform3f(glGetUniformLocation(shader, "dirLight.direction"), -0.2f, -1.0f, -0.3f); 
-    glUniform3f(glGetUniformLocation(shader, "dirLight.ambient"), 0.2f, 0.2f, 0.2f); 
-    glUniform3f(glGetUniformLocation(shader,"dirLight.diffuse"), 0.5f, 0.5f, 0.5f);
-    glUniform3f(glGetUniformLocation(shader, "dirLight.specular"), 1.0f, 1.0f, 1.0f);
-      // point lights
+
+    vec3 lDir = {-0.2f, -1.0f, -0.3f};
+    vec3 lAmb = {0.2f, 0.2f, 0.2f};
+    vec3 lDiff = {0.5f, 0.5f, 0.5f};
+    setDirectionalLight(lDir, lDiff, lAmb, shader);
     for (int i = 0; i < 4; i++) {
       vec3 lPos = { lightCubes[i].posX, lightCubes[i].posY, lightCubes[i].posZ };
       vec3 diff = { 0.8f, 0.8f, 0.8f };
@@ -428,71 +308,14 @@ int main(void) {
     for (int i=0;i<1024;i++) {
       int row = floor((float)i / 32);
       int col = i - (32 * row);
-     // printf("row %d, col: %d\n", row, col);
       setTileData(tiles[i], 16, 112, 112, pixels, planeData, worldVBO);
       mat4x4 tile;
       mat4x4_identity(tile);
       if (tiles[i] != 34) {
-        mat4x4_translate_in_place(tile, col * 0.5f, 0.0f, row * 0.5f);
-        mat4x4_rotate(tile, tile, 1.0f, 0.0f, 0.0f, degToRad(90.0f));
-        mat4x4_scale_aniso(tile, tile, 0.5f, 0.5f, 0.5f);
-        unsigned int modelLoc = glGetUniformLocation(shader, "model");
-        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, (GLfloat *)tile);
-//        glUniform1i(glGetUniformLocation(shader, "material.diffuse"), 0);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, worldTex);
-        glDrawArrays(GL_TRIANGLES, 0, 6);
+        renderTile(tiles[i], row, col, tile, view, worldTex, worldVBO, shader);
       } else {
         resetTileTexCoords(planeData, worldVBO);
-        // mega scuffed
-        for (int c=0;c<4;c++) {
-          mat4x4_identity(tile);
-          if (c == 0) {
-            mat4x4_translate_in_place(tile, (col * 0.5f), 0.25f, (row * 0.5f) - 0.25f);
-          }
-          if (c == 1) {
-            mat4x4_translate_in_place(tile, (col * 0.5f), 0.25f, (row * 0.5f) + 0.25f);
-          }
-          if (c == 2) {
-            mat4x4_translate_in_place(tile, (col * 0.5f) - 0.25f, 0.25f, (row * 0.5f));
-            mat4x4_rotate(tile, tile, 0.0f, 1.0f, 0.0f, degToRad(90.0f));
-          }
-          if (c == 3) {
-            mat4x4_translate_in_place(tile, (col * 0.5f) + 0.25f, 0.25f, (row * 0.5f));
-            mat4x4_rotate(tile, tile, 0.0f, 1.0f, 0.0f, degToRad(90.0f));
-          }
-          mat4x4_scale_aniso(tile, tile, 0.5f, 0.5f, 0.5f);
-          unsigned int modelLoc = glGetUniformLocation(shader, "model");
-          glUniformMatrix4fv(modelLoc, 1, GL_FALSE, (GLfloat *)tile);
-
-  //        updateCubeVBO(CubeVBO, &cube);
-          glActiveTexture(GL_TEXTURE0);
-          glBindTexture(GL_TEXTURE_2D, texture);
-          glBindVertexArray(lightingVAO);
-          glDrawArrays(GL_TRIANGLES, 0, 6);
-
-          // scuffed double height walls?
-          mat4x4_translate_in_place(tile, 0.0f, 1.f, 0.0f);
-          glUniformMatrix4fv(modelLoc, 1, GL_FALSE, (GLfloat *)tile);
-          glActiveTexture(GL_TEXTURE0);
-          glBindTexture(GL_TEXTURE_2D, texture);
-          glBindVertexArray(lightingVAO);
-          glDrawArrays(GL_TRIANGLES, 0, 6);
-
-        }
-        // mega scuffed roof for walls
-        mat4x4_identity(tile);
-        mat4x4_translate_in_place(tile, col * 0.5f, 1.f, row * 0.5f);
-        mat4x4_rotate(tile, tile, 1.0f, 0.0f, 0.0f, degToRad(90.0f));
-        mat4x4_scale_aniso(tile, tile, 0.5f, 0.5f, 0.5f);
-        unsigned int modelLoc = glGetUniformLocation(shader, "model");
-        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, (GLfloat *)tile);
-
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, bsq);
-        glBindVertexArray(lightingVAO);
-        glDrawArrays(GL_TRIANGLES, 0, 6);
-
+        renderWall(tiles[i], row, col, tile, view, texture, worldVBO, shader);
      }
     }
     mat4x4 model;

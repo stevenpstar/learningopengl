@@ -1,6 +1,7 @@
 #include "../../dep/glad/glad.h"
 #include "tile.h"
 #include "../engine/texture.h"
+#include "../engine/camera.h"
 #include <math.h>
 
 unsigned int createWorld(int *tiles, const char *tilesFile, GLubyte *pixelData) {
@@ -128,4 +129,64 @@ void getTileFromPosition(float x, float y, int *pos) {
 
 int getIndexFromTile(int x, int y, int mapWidth) {
   return (y * mapWidth) + x;
+}
+
+void renderTile(int tile, int row, int col, mat4x4 model, mat4x4 view, unsigned int texture, unsigned int VBO, unsigned int shader) {
+  glBindBuffer(GL_VERTEX_ARRAY, VBO);
+  mat4x4_identity(model);
+  mat4x4_translate_in_place(model, col * 0.5f, 0.0f, row * 0.5f);
+  mat4x4_rotate(model, model, 1.0f, 0.0f, 0.0f, degToRad(90.0f));
+  mat4x4_scale_aniso(model, model, 0.5f, 0.5f, 0.5f);
+  unsigned int modelLoc = glGetUniformLocation(shader, "model");
+  glUniformMatrix4fv(modelLoc, 1, GL_FALSE, (GLfloat *)model);
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, texture);
+  glDrawArrays(GL_TRIANGLES, 0, 6);
+}
+
+void renderWall(int tile, int row, int col, vec4 *model, vec4 *view, unsigned int texture, unsigned int VBO, unsigned int shader) {
+  for (int c=0;c<4;c++) {
+    mat4x4_identity(model);
+    if (c == 0) {
+      mat4x4_translate_in_place(model, (col * 0.5f), 0.25f, (row * 0.5f) - 0.25f);
+    }
+    if (c == 1) {
+      mat4x4_translate_in_place(model, (col * 0.5f), 0.25f, (row * 0.5f) + 0.25f);
+    }
+    if (c == 2) {
+      mat4x4_translate_in_place(model, (col * 0.5f) - 0.25f, 0.25f, (row * 0.5f));
+      mat4x4_rotate(model, model, 0.0f, 1.0f, 0.0f, degToRad(90.0f));
+    }
+    if (c == 3) {
+      mat4x4_translate_in_place(model, (col * 0.5f) + 0.25f, 0.25f, (row * 0.5f));
+      mat4x4_rotate(model, model, 0.0f, 1.0f, 0.0f, degToRad(90.0f));
+    }
+    mat4x4_scale_aniso(model, model, 0.5f, 0.5f, 0.5f);
+    unsigned int modelLoc = glGetUniformLocation(shader, "model");
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, (GLfloat *)model);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+
+    // scuffed double height walls?
+    mat4x4_translate_in_place(model, 0.0f, 1.f, 0.0f);
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, (GLfloat *)model);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+
+  }
+  // mega scuffed roof for walls
+  mat4x4_identity(model);
+  mat4x4_translate_in_place(model, col * 0.5f, 1.f, row * 0.5f);
+  mat4x4_rotate(model, model, 1.0f, 0.0f, 0.0f, degToRad(90.0f));
+  mat4x4_scale_aniso(model, model, 0.5f, 0.5f, 0.5f);
+  unsigned int modelLoc = glGetUniformLocation(shader, "model");
+  glUniformMatrix4fv(modelLoc, 1, GL_FALSE, (GLfloat *)model);
+
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, texture);
+  glDrawArrays(GL_TRIANGLES, 0, 6);
+
 }
